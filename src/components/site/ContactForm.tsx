@@ -110,11 +110,12 @@ function Field({
   id: string;
   label: string;
   value: string;
-  error?: string;
+  error?: string | undefined;
   onChange: (value: string) => void;
   type?: string;
   placeholder?: string;
 }) {
+
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>

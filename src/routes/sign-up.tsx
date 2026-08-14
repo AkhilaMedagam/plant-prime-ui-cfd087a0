@@ -35,7 +35,7 @@ export const Route = createFileRoute("/sign-up")({
 });
 
 type Fields = { name: string; email: string; phone: string; password: string; confirm: string };
-type Errors = Partial<Record<keyof Fields | "terms", string>>;
+type Errors = { [K in keyof Fields | "terms"]?: string | undefined };
 
 function SignUp() {
   const navigate = useNavigate();

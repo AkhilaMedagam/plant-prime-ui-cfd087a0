@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { AuthLayout } from "@/components/site/AuthLayout";
+import { GoogleAuthButton } from "@/components/site/GoogleAuthButton";
+
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -119,6 +121,15 @@ function SignIn() {
         <Button type="submit" size="lg" className="w-full" disabled={submitting}>
           {submitting ? "Signing in…" : "Sign In"}
         </Button>
+
+        <div className="flex items-center gap-3">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">or</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
+        <GoogleAuthButton label="Continue with Google" onError={setFormError} />
+
 
         {formError ? (
           <p

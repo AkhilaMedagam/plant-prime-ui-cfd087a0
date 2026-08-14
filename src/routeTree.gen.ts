@@ -15,6 +15,7 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const SignUpRoute = SignUpRouteImport.update({
   path: '/sign-up',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,13 +79,27 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/about' | '/contact' | '/dashboard' | '/sign-in' | '/sign-up'
+    | '/'
+    | '/about'
+    | '/contact'
+    | '/dashboard'
+    | '/sign-in'
+    | '/sign-up'
+    | '/auth/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/contact' | '/dashboard' | '/sign-in' | '/sign-up'
+  to:
+    | '/'
+    | '/about'
+    | '/contact'
+    | '/dashboard'
+    | '/sign-in'
+    | '/sign-up'
+    | '/auth/callback'
   id:
     | '__root__'
     | '/'
@@ -86,6 +108,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/sign-in'
     | '/sign-up'
+    | '/auth/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -95,6 +118,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -141,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignUpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -151,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

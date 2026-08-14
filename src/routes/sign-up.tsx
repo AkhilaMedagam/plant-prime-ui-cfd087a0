@@ -240,6 +240,15 @@ function SignUp() {
           {submitting ? "Creating account…" : "Create Account"}
         </Button>
 
+        <div className="flex items-center gap-3">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">or</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
+        <GoogleAuthButton label="Sign Up with Google" onError={setFormError} />
+
+
         {formError ? (
           <p
             role="alert"

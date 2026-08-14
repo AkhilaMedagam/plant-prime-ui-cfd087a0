@@ -135,7 +135,7 @@ function Home() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg" className="w-full shadow-soft sm:w-auto">
-                  <Link to="/signup">Get Started</Link>
+                  <Link to="/sign-up">Get Started</Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
                   <Link to="/about">Learn More</Link>

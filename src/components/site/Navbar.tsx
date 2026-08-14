@@ -38,10 +38,10 @@ export function Navbar() {
             ))}
             <div className="ml-3 flex items-center gap-2">
               <Button asChild variant="ghost" size="sm">
-                <Link to="/signin">Sign In</Link>
+                <Link to="/sign-in">Sign In</Link>
               </Button>
               <Button asChild size="sm" className="shadow-soft">
-                <Link to="/signup">Get Started</Link>
+                <Link to="/sign-up">Get Started</Link>
               </Button>
             </div>
           </nav>
@@ -76,12 +76,12 @@ export function Navbar() {
             ))}
             <div className="mt-3 flex flex-col gap-2">
               <Button asChild variant="outline" className="w-full">
-                <Link to="/signin" onClick={() => setOpen(false)}>
+                <Link to="/sign-in" onClick={() => setOpen(false)}>
                   Sign In
                 </Link>
               </Button>
               <Button asChild className="w-full">
-                <Link to="/signup" onClick={() => setOpen(false)}>
+                <Link to="/sign-up" onClick={() => setOpen(false)}>
                   Get Started
                 </Link>
               </Button>

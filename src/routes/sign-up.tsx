@@ -69,7 +69,7 @@ function SignUp() {
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/signin" className="font-semibold text-primary hover:underline">
+          <Link to="/sign-in" className="font-semibold text-primary hover:underline">
             Sign In
           </Link>
         </>

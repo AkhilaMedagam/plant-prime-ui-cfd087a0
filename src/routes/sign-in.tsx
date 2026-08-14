@@ -44,7 +44,7 @@ function SignIn() {
       footer={
         <>
           Don't have an account?{" "}
-          <Link to="/signup" className="font-semibold text-primary hover:underline">
+          <Link to="/sign-up" className="font-semibold text-primary hover:underline">
             Sign Up
           </Link>
         </>

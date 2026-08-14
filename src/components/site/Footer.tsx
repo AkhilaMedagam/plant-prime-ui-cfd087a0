@@ -6,8 +6,8 @@ const navLinks = [
   { to: "/", label: "Home" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
-  { to: "/signin", label: "Sign In" },
-  { to: "/signup", label: "Sign Up" },
+  { to: "/sign-in", label: "Sign In" },
+  { to: "/sign-up", label: "Sign Up" },
 ] as const;
 
 const socials = [

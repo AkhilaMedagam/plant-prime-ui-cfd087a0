@@ -25,7 +25,7 @@ export function CTASection({
             </p>
             <div className="mt-8">
               <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto">
-                <Link to="/signup">{buttonLabel}</Link>
+                <Link to="/sign-up">{buttonLabel}</Link>
               </Button>
             </div>
           </div>

@@ -40,7 +40,7 @@ export function GoogleAuthButton({
     onError(null);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/auth/callback`,
       });
 
       if (result.error) {
@@ -51,7 +51,7 @@ export function GoogleAuthButton({
 
       if (result.redirected) return;
 
-      window.location.href = "/dashboard";
+      window.location.href = "/auth/callback";
     } catch {
       onError("Couldn't reach Google right now. Check your connection and try again.");
       setLoading(false);

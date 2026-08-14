@@ -1,10 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent } from "react";
 import { AuthLayout } from "@/components/site/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { friendlyAuthError, useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/sign-in")({
   head: () => ({
@@ -22,19 +24,46 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignIn() {
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [notice, setNotice] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    if (!loading && user) navigate({ to: "/dashboard", replace: true });
+  }, [loading, user, navigate]);
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitting) return;
+
     const next: { email?: string; password?: string } = {};
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
       next.email = "Please enter a valid email address.";
     if (password.length < 6) next.password = "Password must be at least 6 characters.";
     setErrors(next);
-    setNotice(Object.keys(next).length === 0);
+    setFormError(null);
+    if (Object.keys(next).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) {
+        setFormError(friendlyAuthError(error.message));
+        return;
+      }
+      navigate({ to: "/dashboard", replace: true });
+    } catch (error) {
+      setFormError(friendlyAuthError(error instanceof Error ? error.message : null));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -87,13 +116,16 @@ function SignIn() {
           </span>
         </div>
 
-        <Button type="submit" size="lg" className="w-full">
-          Sign In
+        <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+          {submitting ? "Signing in…" : "Sign In"}
         </Button>
 
-        {notice ? (
-          <p className="rounded-xl border border-border bg-accent px-4 py-3 text-sm text-accent-foreground">
-            Looks good! Accounts aren't connected yet — this screen is UI only for now.
+        {formError ? (
+          <p
+            role="alert"
+            className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          >
+            {formError}
           </p>
         ) : null}
       </form>

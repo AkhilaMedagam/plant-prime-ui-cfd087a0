@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export const Route = createFileRoute("/signup")({
+export const Route = createFileRoute("/sign-up")({
   head: () => ({
     meta: [
       { title: "Create Your AgriSmart Account" },

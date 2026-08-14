@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/signin")({
+export const Route = createFileRoute("/sign-in")({
   head: () => ({
     meta: [
       { title: "Sign In — AgriSmart" },

@@ -1,10 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Leaf, LogOut } from "lucide-react";
-import { PageContainer } from "@/components/site/PageContainer";
-import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Bot, CheckCircle2, Circle, CloudSun, Inbox, Leaf, Sprout } from "lucide-react";
+import { DashboardLayout } from "@/components/site/DashboardLayout";
+import { useProfile } from "@/lib/use-profile";
 
 export const Route = createFileRoute("/dashboard")({
   ssr: false,
@@ -13,7 +10,7 @@ export const Route = createFileRoute("/dashboard")({
       { title: "Dashboard — AgriSmart" },
       {
         name: "description",
-        content: "Your AgriSmart dashboard with your account details and farming insights.",
+        content: "Your AgriSmart dashboard with crop, soil, weather and AI coaching shortcuts.",
       },
       { property: "og:title", content: "Dashboard — AgriSmart" },
       { property: "og:description", content: "Your personal AgriSmart dashboard." },
@@ -23,93 +20,119 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
-type Profile = { full_name: string; email: string; phone: string };
+const quickActions = [
+  {
+    to: "/crops",
+    label: "Crop Information",
+    description: "Varieties, planting windows and crop care guidance.",
+    icon: Sprout,
+  },
+  {
+    to: "/soil",
+    label: "Soil Insights",
+    description: "Understand soil health and nutrient needs.",
+    icon: Leaf,
+  },
+  {
+    to: "/weather",
+    label: "Weather",
+    description: "Plan field work around local conditions.",
+    icon: CloudSun,
+  },
+  {
+    to: "/ai-coach",
+    label: "AI Coach",
+    description: "Ask farming questions and get guidance.",
+    icon: Bot,
+  },
+] as const;
 
 function Dashboard() {
-  const navigate = useNavigate();
-  const { user, loading, signOut } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [signingOut, setSigningOut] = useState(false);
+  const { profile, fullName, onboardingCompleted } = useProfile();
 
-  useEffect(() => {
-    if (!loading && !user) navigate({ to: "/sign-in", replace: true });
-  }, [loading, user, navigate]);
-
-  useEffect(() => {
-    if (!user) return;
-    let active = true;
-    supabase
-      .from("profiles")
-      .select("full_name, email, phone")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (active && data) setProfile(data as Profile);
-      });
-    return () => {
-      active = false;
-    };
-  }, [user]);
-
-  const handleSignOut = async () => {
-    if (signingOut) return;
-    setSigningOut(true);
-    await signOut();
-    navigate({ to: "/sign-in", replace: true });
-  };
-
-  if (loading || !user) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-background px-4">
-        <p className="text-sm text-muted-foreground">Loading your dashboard…</p>
-      </div>
-    );
-  }
-
-  const name = profile?.full_name || (user.user_metadata?.["full_name"] as string) || "Farmer";
+  const profileComplete = Boolean(profile?.full_name && profile?.email && profile?.phone);
+  const steps = [
+    { label: "Complete your profile", done: profileComplete },
+    { label: "Explore the dashboard", done: true },
+    { label: "Use a main AgriSmart feature", done: onboardingCompleted === true },
+    { label: "Try the AI Coach", done: false },
+  ];
+  const doneCount = steps.filter((s) => s.done).length;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-background/85 backdrop-blur">
-        <PageContainer>
-          <div className="flex h-16 items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
-                <Leaf className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <span className="truncate text-lg font-bold tracking-tight">AgriSmart</span>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleSignOut} disabled={signingOut}>
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-              {signingOut ? "Signing out…" : "Sign Out"}
-            </Button>
-          </div>
-        </PageContainer>
-      </header>
-
-      <main>
-        <PageContainer className="py-10">
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Welcome, {name}</h1>
+    <DashboardLayout>
+      <div className="mx-auto max-w-5xl">
+        <section>
+          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+            Welcome back{fullName ? `, ${fullName}` : ""}
+          </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            You're signed in to AgriSmart. Your account details are below.
+            Make smarter farming decisions with AgriSmart.
           </p>
+        </section>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
-              <p className="text-sm font-medium text-muted-foreground">Full Name</p>
-              <p className="mt-1 font-semibold">{profile?.full_name || "—"}</p>
-            </div>
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
-              <p className="text-sm font-medium text-muted-foreground">Email</p>
-              <p className="mt-1 break-words font-semibold">{profile?.email || user.email}</p>
-            </div>
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
-              <p className="text-sm font-medium text-muted-foreground">Phone Number</p>
-              <p className="mt-1 font-semibold">{profile?.phone || "—"}</p>
-            </div>
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">Quick actions</h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {quickActions.map((action) => (
+              <Link
+                key={action.to}
+                to={action.to}
+                className="group rounded-2xl border border-border bg-card p-5 shadow-soft transition-all duration-200 hover:-translate-y-1 hover:shadow-lift"
+              >
+                <span className="grid h-11 w-11 place-items-center rounded-xl bg-accent text-accent-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                  <action.icon className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <h3 className="mt-4 font-semibold">{action.label}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {action.description}
+                </p>
+              </Link>
+            ))}
           </div>
-        </PageContainer>
-      </main>
-    </div>
+        </section>
+
+        <div className="mt-8 grid gap-4 lg:grid-cols-2">
+          <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-lg font-semibold">Getting started</h2>
+              <span className="text-sm text-muted-foreground">{doneCount} of {steps.length}</span>
+            </div>
+            <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${(doneCount / steps.length) * 100}%` }}
+              />
+            </div>
+            <ul className="mt-5 space-y-3">
+              {steps.map((step) => (
+                <li key={step.label} className="flex items-center gap-3 text-sm">
+                  {step.done ? (
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+                  ) : (
+                    <Circle className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  )}
+                  <span className={step.done ? "text-foreground" : "text-muted-foreground"}>
+                    {step.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+            <h2 className="text-lg font-semibold">Recent activity</h2>
+            <div className="mt-6 flex flex-col items-center rounded-xl border border-dashed border-border px-6 py-10 text-center">
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-accent text-accent-foreground">
+                <Inbox className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <p className="mt-4 text-sm text-muted-foreground">
+                No activity yet. Start using AgriSmart to see your recent activity here.
+              </p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </DashboardLayout>
   );
 }

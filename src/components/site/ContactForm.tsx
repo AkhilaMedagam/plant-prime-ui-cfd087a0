@@ -3,40 +3,75 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
-type Fields = { name: string; email: string; subject: string; message: string };
+type Fields = { name: string; email: string; phone: string; message: string };
 type Errors = Partial<Record<keyof Fields, string>>;
 
-const empty: Fields = { name: "", email: "", subject: "", message: "" };
+const empty: Fields = { name: "", email: "", phone: "", message: "" };
+
+const MAX_MESSAGE = 2000;
 
 function validate(values: Fields): Errors {
   const errors: Errors = {};
-  if (!values.name.trim()) errors.name = "Please tell us your name.";
+  if (values.name.trim().length < 2)
+    errors.name = "Please enter your full name (at least 2 characters).";
   if (!values.email.trim()) errors.email = "Please enter your email address.";
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim()))
     errors.email = "That email address doesn't look right.";
-  if (!values.subject.trim()) errors.subject = "Please add a short subject.";
+  if (!values.phone.trim())
+    errors.phone = "Please enter your phone number.";
+  else if (!/^[0-9()+\-\s]{7,20}$/.test(values.phone.trim()))
+    errors.phone = "Please enter a valid phone number.";
   if (values.message.trim().length < 10)
     errors.message = "Please write at least 10 characters so we can help.";
+  else if (values.message.trim().length > MAX_MESSAGE)
+    errors.message = `Please keep your message under ${MAX_MESSAGE} characters.`;
   return errors;
 }
 
 export function ContactForm() {
+  const { user } = useAuth();
   const [values, setValues] = useState<Fields>(empty);
   const [errors, setErrors] = useState<Errors>({});
   const [sent, setSent] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const set = (key: keyof Fields) => (value: string) => {
     setValues((v) => ({ ...v, [key]: value }));
     setErrors((e) => ({ ...e, [key]: undefined }));
     setSent(false);
+    setSubmitError(null);
   };
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitting) return;
     const next = validate(values);
     setErrors(next);
     if (Object.keys(next).length > 0) return;
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const { error } = await supabase.from("contact_submissions").insert({
+      full_name: values.name.trim(),
+      email: values.email.trim(),
+      phone: values.phone.trim(),
+      message: values.message.trim(),
+      status: "new",
+      user_id: user?.id ?? null,
+    });
+
+    setSubmitting(false);
+
+    if (error) {
+      setSubmitError("We could not submit your message. Please try again.");
+      return;
+    }
+
     setValues(empty);
     setSent(true);
   };
@@ -64,12 +99,13 @@ export function ContactForm() {
       </div>
 
       <Field
-        id="subject"
-        label="Subject"
-        placeholder="What is this about?"
-        value={values.subject}
-        error={errors.subject}
-        onChange={set("subject")}
+        id="phone"
+        type="tel"
+        label="Phone Number"
+        placeholder="e.g. +91 98765 43210"
+        value={values.phone}
+        error={errors.phone}
+        onChange={set("phone")}
       />
 
       <div className="space-y-2">
@@ -85,13 +121,19 @@ export function ContactForm() {
         {errors.message ? <p className="text-sm text-destructive">{errors.message}</p> : null}
       </div>
 
-      <Button type="submit" size="lg" className="w-full sm:w-auto">
-        Send Message
+      <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={submitting}>
+        {submitting ? "Sending..." : "Send Message"}
       </Button>
 
       {sent ? (
         <p className="rounded-xl border border-border bg-accent px-4 py-3 text-sm text-accent-foreground">
-          Thanks! Your message looks good. Messaging isn't connected yet, so nothing was sent.
+          Thank you for contacting AgriSmart. Your message has been received.
+        </p>
+      ) : null}
+
+      {submitError ? (
+        <p className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {submitError}
         </p>
       ) : null}
     </form>

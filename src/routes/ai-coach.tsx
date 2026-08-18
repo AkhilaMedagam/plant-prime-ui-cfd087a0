@@ -49,14 +49,6 @@ const SUGGESTED_QUESTIONS = [
   "Which pests commonly affect tomato plants in summer?",
 ] as const;
 
-function makeMessage(role: UIMessage["role"], text: string): UIMessage {
-  return {
-    id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    role,
-    parts: [{ type: "text", text }],
-  };
-}
-
 function Page() {
   return (
     <DashboardLayout>
@@ -69,37 +61,24 @@ function Page() {
 
 function AICoach() {
   const controller = usePromptInputController();
-  const [messages, setMessages] = useState<UIMessage[]>([]);
-  const [status, setStatus] = useState<ChatStatus>("ready");
-
-  // No AI backend is connected yet. Sending a message records the question and
-  // replies with a clear "service not connected" notice instead of a fake answer.
-  // When a real LLM is wired up (e.g. via /api/chat + useChat), replace this body.
-  const sendMessage = useCallback((text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-
-    const userMessage = makeMessage("user", trimmed);
-    const notice = makeMessage(
-      "assistant",
-      "AI service is not connected yet.",
-    );
-    setMessages((prev) => [...prev, userMessage, notice]);
-    setStatus("error");
-  }, []);
+  const { messages, sendMessage, status, error, stop, setMessages } = useChat({
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
+  });
 
   const handleSubmit = useCallback(
     ({ text }: { text: string }) => {
-      sendMessage(text);
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      void sendMessage({ text: trimmed });
     },
     [sendMessage],
   );
 
   const newConversation = useCallback(() => {
+    stop();
     setMessages([]);
-    setStatus("ready");
     controller.textInput.clear();
-  }, [controller]);
+  }, [controller, setMessages, stop]);
 
   const isEmpty = messages.length === 0;
   const isLoading = status === "submitted" || status === "streaming";

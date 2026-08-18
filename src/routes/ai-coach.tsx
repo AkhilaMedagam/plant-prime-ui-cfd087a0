@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
-import type { ChatStatus, UIMessage } from "ai";
-import { Bot, Info, Plus, SendHorizonal } from "lucide-react";
+import { useCallback } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { AlertTriangle, Bot, Info, Plus, SendHorizonal } from "lucide-react";
 import { DashboardLayout } from "@/components/site/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,14 +49,6 @@ const SUGGESTED_QUESTIONS = [
   "Which pests commonly affect tomato plants in summer?",
 ] as const;
 
-function makeMessage(role: UIMessage["role"], text: string): UIMessage {
-  return {
-    id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    role,
-    parts: [{ type: "text", text }],
-  };
-}
-
 function Page() {
   return (
     <DashboardLayout>
@@ -68,37 +61,24 @@ function Page() {
 
 function AICoach() {
   const controller = usePromptInputController();
-  const [messages, setMessages] = useState<UIMessage[]>([]);
-  const [status, setStatus] = useState<ChatStatus>("ready");
-
-  // No AI backend is connected yet. Sending a message records the question and
-  // replies with a clear "service not connected" notice instead of a fake answer.
-  // When a real LLM is wired up (e.g. via /api/chat + useChat), replace this body.
-  const sendMessage = useCallback((text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-
-    const userMessage = makeMessage("user", trimmed);
-    const notice = makeMessage(
-      "assistant",
-      "AI service is not connected yet.",
-    );
-    setMessages((prev) => [...prev, userMessage, notice]);
-    setStatus("error");
-  }, []);
+  const { messages, sendMessage, status, error, stop, setMessages } = useChat({
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
+  });
 
   const handleSubmit = useCallback(
     ({ text }: { text: string }) => {
-      sendMessage(text);
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      void sendMessage({ text: trimmed });
     },
     [sendMessage],
   );
 
   const newConversation = useCallback(() => {
+    stop();
     setMessages([]);
-    setStatus("ready");
     controller.textInput.clear();
-  }, [controller]);
+  }, [controller, setMessages, stop]);
 
   const isEmpty = messages.length === 0;
   const isLoading = status === "submitted" || status === "streaming";
@@ -166,26 +146,24 @@ function AICoach() {
                 </div>
               </ConversationEmptyState>
             ) : (
-              messages.map((message) => (
-                <Message key={message.id} from={message.role}>
-                  <MessageContent>
-                    {message.role === "user" ? (
-                      <p className="whitespace-pre-wrap break-words">
-                        {message.parts
-                          .map((part) =>
-                            part.type === "text" ? part.text : "",
-                          )
-                          .join("")}
-                      </p>
-                    ) : (
-                      <NotConnectedNotice />
-                    )}
-                  </MessageContent>
-                </Message>
-              ))
+              messages.map((message) => {
+                const text = message.parts
+                  .map((part) => (part.type === "text" ? part.text : ""))
+                  .join("");
+                if (!text) return null;
+                return (
+                  <Message key={message.id} from={message.role}>
+                    <MessageContent>
+                      <p className="whitespace-pre-wrap break-words">{text}</p>
+                    </MessageContent>
+                  </Message>
+                );
+              })
             )}
 
-            {isLoading ? (
+            {error ? <ErrorNotice message={error.message} /> : null}
+
+            {status === "submitted" ? (
               <Message from="assistant">
                 <MessageContent>
                   <Shimmer as="p" className="text-sm">

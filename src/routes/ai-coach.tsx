@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
-import type { ChatStatus, UIMessage } from "ai";
-import { Bot, Info, Plus, SendHorizonal } from "lucide-react";
+import { useCallback } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { AlertTriangle, Bot, Info, Plus, SendHorizonal } from "lucide-react";
 import { DashboardLayout } from "@/components/site/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import {

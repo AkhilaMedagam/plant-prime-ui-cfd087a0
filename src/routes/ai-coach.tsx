@@ -146,26 +146,24 @@ function AICoach() {
                 </div>
               </ConversationEmptyState>
             ) : (
-              messages.map((message) => (
-                <Message key={message.id} from={message.role}>
-                  <MessageContent>
-                    {message.role === "user" ? (
-                      <p className="whitespace-pre-wrap break-words">
-                        {message.parts
-                          .map((part) =>
-                            part.type === "text" ? part.text : "",
-                          )
-                          .join("")}
-                      </p>
-                    ) : (
-                      <NotConnectedNotice />
-                    )}
-                  </MessageContent>
-                </Message>
-              ))
+              messages.map((message) => {
+                const text = message.parts
+                  .map((part) => (part.type === "text" ? part.text : ""))
+                  .join("");
+                if (!text) return null;
+                return (
+                  <Message key={message.id} from={message.role}>
+                    <MessageContent>
+                      <p className="whitespace-pre-wrap break-words">{text}</p>
+                    </MessageContent>
+                  </Message>
+                );
+              })
             )}
 
-            {isLoading ? (
+            {error ? <ErrorNotice message={error.message} /> : null}
+
+            {status === "submitted" ? (
               <Message from="assistant">
                 <MessageContent>
                   <Shimmer as="p" className="text-sm">

@@ -186,10 +186,16 @@ function AICoach() {
             <PromptInputFooter className="justify-between gap-2">
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                AI service is not connected yet
+                AI guidance can be imperfect — verify before acting
               </span>
-              <PromptInputSubmit status={status} disabled={isLoading}>
-                <SendHorizonal className="h-4 w-4" aria-hidden="true" />
+              <PromptInputSubmit
+                status={status}
+                onStop={stop}
+                disabled={status === "submitted"}
+              >
+                {isLoading ? undefined : (
+                  <SendHorizonal className="h-4 w-4" aria-hidden="true" />
+                )}
               </PromptInputSubmit>
             </PromptInputFooter>
           </PromptInput>
@@ -199,16 +205,17 @@ function AICoach() {
   );
 }
 
-function NotConnectedNotice() {
+function ErrorNotice({ message }: { message: string }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-dashed border-border bg-muted/40 p-4">
-      <Info className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+    <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/5 p-4">
+      <AlertTriangle
+        className="mt-0.5 h-5 w-5 shrink-0 text-destructive"
+        aria-hidden="true"
+      />
       <div className="space-y-1">
-        <p className="text-sm font-semibold">AI service is not connected yet</p>
+        <p className="text-sm font-semibold">Couldn't get an answer</p>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          AgriSmart AI Coach is still being prepared. Your question was noted, but
-          no answer could be generated yet. Please check back soon — farming
-          guidance will appear here once the AI service is connected.
+          {message || "Something went wrong. Please try sending your question again."}
         </p>
       </div>
     </div>

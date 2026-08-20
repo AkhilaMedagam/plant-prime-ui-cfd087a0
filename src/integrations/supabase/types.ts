@@ -47,6 +47,36 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_documents: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          id: string
+          source: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          source?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          source?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           auth_provider: string

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
+  BookOpen,
   Bot,
   CloudSun,
   LayoutDashboard,
@@ -32,6 +33,7 @@ const navItems = [
   { to: "/soil", label: "Soil", icon: Leaf },
   { to: "/weather", label: "Weather", icon: CloudSun },
   { to: "/ai-coach", label: "AI Coach", icon: Bot },
+  { to: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
   { to: "/profile", label: "Profile", icon: User },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;

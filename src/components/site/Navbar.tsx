@@ -54,7 +54,6 @@ export function Navbar() {
             className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border text-foreground md:hidden"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-
           </button>
         </div>
       </PageContainer>

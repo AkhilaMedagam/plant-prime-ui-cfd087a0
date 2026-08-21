@@ -1,0 +1,6 @@
+{
+  "name": "Plant Prime",
+  "description": "Smart agriculture and crop advisory platform with AI coaching, soil and weather tracking, and crop management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

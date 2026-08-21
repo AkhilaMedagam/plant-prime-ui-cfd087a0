@@ -15,7 +15,10 @@ export function CTASection({
     <section className="py-16 sm:py-20">
       <PageContainer>
         <div className="gradient-cta relative overflow-hidden rounded-3xl px-6 py-14 text-center shadow-lift sm:px-12">
-          <div className="leaf-grid pointer-events-none absolute inset-0 opacity-15" aria-hidden="true" />
+          <div
+            className="leaf-grid pointer-events-none absolute inset-0 opacity-15"
+            aria-hidden="true"
+          />
           <div className="relative mx-auto max-w-2xl">
             <h2 className="text-balance text-2xl font-bold tracking-tight text-primary-foreground sm:text-4xl">
               {title}

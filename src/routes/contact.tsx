@@ -68,7 +68,10 @@ function Contact() {
 
             <div className="grid content-start gap-5">
               {infoCards.map(({ icon: Icon, title, body, note }) => (
-                <div key={title} className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+                <div
+                  key={title}
+                  className="rounded-2xl border border-border bg-card p-6 shadow-soft"
+                >
                   <span className="grid h-11 w-11 place-items-center rounded-xl bg-accent text-accent-foreground">
                     <Icon className="h-5 w-5" aria-hidden="true" />
                   </span>

@@ -45,7 +45,9 @@ export function AuthLayout({
         />
         <div className="gradient-cta absolute inset-0 opacity-70" aria-hidden="true" />
         <div className="absolute bottom-10 left-10 right-10">
-          <p className="text-2xl font-bold text-primary-foreground">Smart Farming, Better Future.</p>
+          <p className="text-2xl font-bold text-primary-foreground">
+            Smart Farming, Better Future.
+          </p>
           <p className="mt-2 max-w-sm text-sm text-primary-foreground/85">
             Crop, soil, weather, disease and market insights in one simple platform.
           </p>

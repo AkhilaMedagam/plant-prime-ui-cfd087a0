@@ -29,9 +29,7 @@ export function Footer() {
               </span>
               <span className="truncate text-lg font-bold">AgriSmart</span>
             </div>
-            <p className="mt-3 text-sm font-semibold text-primary">
-              Smart Farming, Better Future.
-            </p>
+            <p className="mt-3 text-sm font-semibold text-primary">Smart Farming, Better Future.</p>
             <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
               An AI-powered platform designed to support smarter, more informed, and sustainable
               farming decisions.

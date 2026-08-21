@@ -93,9 +93,7 @@ function AICoach() {
               <Bot className="h-5 w-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-bold leading-tight">
-                AgriSmart AI Coach
-              </h1>
+              <h1 className="truncate text-base font-bold leading-tight">AgriSmart AI Coach</h1>
               <p className="truncate text-xs text-muted-foreground">
                 Smart farming guidance, on demand
               </p>
@@ -124,12 +122,10 @@ function AICoach() {
                   <Bot className="h-7 w-7" aria-hidden="true" />
                 </span>
                 <div className="space-y-1.5">
-                  <h3 className="text-base font-semibold">
-                    Ask the AgriSmart AI Coach
-                  </h3>
+                  <h3 className="text-base font-semibold">Ask the AgriSmart AI Coach</h3>
                   <p className="max-w-md text-sm text-muted-foreground">
-                    Get guidance on crops, soil health, weather planning and pest
-                    control. Start with a suggested question or ask your own.
+                    Get guidance on crops, soil health, weather planning and pest control. Start
+                    with a suggested question or ask your own.
                   </p>
                 </div>
                 <div className="mt-2 grid w-full max-w-lg gap-2 sm:grid-cols-2">
@@ -147,9 +143,14 @@ function AICoach() {
               </ConversationEmptyState>
             ) : (
               messages.map((message) => {
-                const text = message.parts
-                  .map((part) => (part.type === "text" ? part.text : ""))
-                  .join("");
+                const partsText = Array.isArray(message.parts)
+                  ? message.parts.map((part) => (part.type === "text" ? part.text : "")).join("")
+                  : "";
+                const text =
+                  partsText ||
+                  ("content" in message && typeof message.content === "string"
+                    ? message.content
+                    : "");
                 if (!text) return null;
                 return (
                   <Message key={message.id} from={message.role}>
@@ -179,23 +180,14 @@ function AICoach() {
         {/* Composer */}
         <div className="shrink-0 border-t border-border p-3 sm:p-4">
           <PromptInput onSubmit={handleSubmit}>
-            <PromptInputTextarea
-              autoFocus
-              placeholder="Ask about crops, soil, weather, pests…"
-            />
+            <PromptInputTextarea autoFocus placeholder="Ask about crops, soil, weather, pests…" />
             <PromptInputFooter className="justify-between gap-2">
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Info className="h-3.5 w-3.5" aria-hidden="true" />
                 AI guidance can be imperfect — verify before acting
               </span>
-              <PromptInputSubmit
-                status={status}
-                onStop={stop}
-                disabled={status === "submitted"}
-              >
-                {isLoading ? undefined : (
-                  <SendHorizonal className="h-4 w-4" aria-hidden="true" />
-                )}
+              <PromptInputSubmit status={status} onStop={stop} disabled={status === "submitted"}>
+                {isLoading ? undefined : <SendHorizonal className="h-4 w-4" aria-hidden="true" />}
               </PromptInputSubmit>
             </PromptInputFooter>
           </PromptInput>
@@ -208,10 +200,7 @@ function AICoach() {
 function ErrorNotice({ message }: { message: string }) {
   return (
     <div className="flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/5 p-4">
-      <AlertTriangle
-        className="mt-0.5 h-5 w-5 shrink-0 text-destructive"
-        aria-hidden="true"
-      />
+      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
       <div className="space-y-1">
         <p className="text-sm font-semibold">Couldn't get an answer</p>
         <p className="text-sm leading-relaxed text-muted-foreground">

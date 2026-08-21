@@ -23,27 +23,27 @@ Create a clean, modern, trustworthy agriculture-tech design.
 
 The website should feel:
 
-* Natural
-* Professional
-* Friendly
-* Reliable
-* Modern
-* Simple
-* Farmer-focused
-* AI-powered without looking overly futuristic
+- Natural
+- Professional
+- Friendly
+- Reliable
+- Modern
+- Simple
+- Farmer-focused
+- AI-powered without looking overly futuristic
 
 Avoid making the website look like a generic corporate SaaS template.
 
 Use agriculture-related visual elements such as:
 
-* Plants
-* Leaves
-* Farms
-* Crops
-* Soil
-* Weather
-* Sustainable agriculture
-* Smart farming technology
+- Plants
+- Leaves
+- Farms
+- Crops
+- Soil
+- Weather
+- Sustainable agriculture
+- Smart farming technology
 
 Use subtle agricultural illustrations or high-quality agricultural imagery where appropriate.
 
@@ -57,25 +57,25 @@ Create a consistent design system.
 
 Primary color:
 
-* Agriculture green
+- Agriculture green
 
 Supporting colors:
 
-* Dark green
-* Light green
-* White
-* Very light natural background
-* Neutral gray
-* Dark text
+- Dark green
+- Light green
+- White
+- Very light natural background
+- Neutral gray
+- Dark text
 
 Use green primarily for:
 
-* Primary buttons
-* Important highlights
-* Active navigation
-* Icons
-* Section accents
-* Success states
+- Primary buttons
+- Important highlights
+- Active navigation
+- Icons
+- Section accents
+- Success states
 
 Use neutral colors for most backgrounds so the interface remains clean.
 
@@ -91,11 +91,11 @@ Use a modern, highly readable sans-serif font.
 
 Typography should have clear hierarchy:
 
-* Large bold hero heading
-* Medium section headings
-* Comfortable body text
-* Clear button labels
-* Readable navigation
+- Large bold hero heading
+- Medium section headings
+- Comfortable body text
+- Clear button labels
+- Readable navigation
 
 Avoid extremely thin fonts.
 
@@ -113,24 +113,24 @@ Left side:
 
 Navigation links:
 
-* Home
-* About
-* Contact
+- Home
+- About
+- Contact
 
 Right side:
 
-* Sign In
-* Get Started
+- Sign In
+- Get Started
 
 The AgriSmart logo should be represented by a simple agriculture-inspired icon such as a leaf or plant.
 
 The navbar should:
 
-* Remain clean
-* Have sufficient spacing
-* Have a subtle border or shadow
-* Work correctly on mobile
-* Collapse into a hamburger menu on smaller screens
+- Remain clean
+- Have sufficient spacing
+- Have a subtle border or shadow
+- Work correctly on mobile
+- Collapse into a hamburger menu on smaller screens
 
 The "Get Started" button should be visually prominent.
 
@@ -166,10 +166,10 @@ Add a beautiful agriculture-related visual on the right side.
 
 The hero should visually communicate:
 
-* Farming
-* Technology
-* Intelligence
-* Sustainability
+- Farming
+- Technology
+- Intelligence
+- Sustainability
 
 Do not make the hero too crowded.
 
@@ -219,9 +219,9 @@ Use six visually consistent cards.
 
 Each card should contain:
 
-* Icon
-* Title
-* Short description
+- Icon
+- Title
+- Short description
 
 Keep descriptions short.
 
@@ -261,10 +261,10 @@ Create a section titled:
 
 Include four benefits:
 
-* Simple and easy to use
-* Personalized agricultural insights
-* Data-driven decision support
-* Focus on sustainable farming
+- Simple and easy to use
+- Personalized agricultural insights
+- Data-driven decision support
+- Focus on sustainable farming
 
 Use icons and short descriptions.
 
@@ -308,11 +308,11 @@ Short description:
 
 Navigation:
 
-* Home
-* About
-* Contact
-* Sign In
-* Sign Up
+- Home
+- About
+- Contact
+- Sign In
+- Sign Up
 
 Add:
 
@@ -352,12 +352,12 @@ Then create:
 
 Create feature cards for:
 
-* Crop Information
-* Soil Insights
-* Weather Information
-* Disease Awareness
-* Market Information
-* AI Farming Assistance
+- Crop Information
+- Soil Insights
+- Weather Information
+- Disease Awareness
+- Market Information
+- AI Farming Assistance
 
 Add a section:
 
@@ -395,10 +395,10 @@ Create a two-column layout.
 
 Fields:
 
-* Full Name
-* Email Address
-* Subject
-* Message
+- Full Name
+- Email Address
+- Subject
+- Message
 
 Button:
 
@@ -448,13 +448,13 @@ Subtitle:
 
 Fields:
 
-* Email Address
-* Password
+- Email Address
+- Password
 
 Options:
 
-* Remember me
-* Forgot Password?
+- Remember me
+- Forgot Password?
 
 Button:
 
@@ -488,14 +488,14 @@ Subtitle:
 
 Fields:
 
-* Full Name
-* Email Address
-* Password
-* Confirm Password
+- Full Name
+- Email Address
+- Password
+- Confirm Password
 
 Optional:
 
-* Preferred Language
+- Preferred Language
 
 Button:
 
@@ -521,23 +521,23 @@ The entire application must be responsive.
 
 Desktop:
 
-* Wide layouts
-* Two-column hero sections
-* Spacious cards
+- Wide layouts
+- Two-column hero sections
+- Spacious cards
 
 Tablet:
 
-* Adjust grid sizes
-* Maintain readable spacing
+- Adjust grid sizes
+- Maintain readable spacing
 
 Mobile:
 
-* Hamburger navigation
-* Single-column sections
-* Full-width buttons where appropriate
-* Comfortable touch targets
-* No horizontal scrolling
-* Images should scale correctly
+- Hamburger navigation
+- Single-column sections
+- Full-width buttons where appropriate
+- Comfortable touch targets
+- No horizontal scrolling
+- Images should scale correctly
 
 Test the layout mentally for common mobile widths such as 360px, 390px, and 430px.
 
@@ -549,15 +549,15 @@ Create reusable components instead of duplicating UI.
 
 Suggested components:
 
-* Navbar
-* Footer
-* Button
-* FeatureCard
-* SectionHeading
-* CTASection
-* ContactForm
-* AuthForm
-* PageContainer
+- Navbar
+- Footer
+- Button
+- FeatureCard
+- SectionHeading
+- CTASection
+- ContactForm
+- AuthForm
+- PageContainer
 
 Keep the code organized and maintainable.
 
@@ -585,16 +585,16 @@ The Home page should be the default route.
 
 For this first version:
 
-* Focus on frontend UI and UX.
-* Do not add unnecessary dependencies.
-* Do not implement backend functionality.
-* Do not create database tables yet.
-* Do not connect external APIs.
-* Do not implement AI yet.
-* Do not add fake agricultural data that could be interpreted as real-time information.
-* Do not add fake testimonials or fake customer statistics.
-* Do not claim guaranteed agricultural results.
-* Keep the application easy to extend later.
+- Focus on frontend UI and UX.
+- Do not add unnecessary dependencies.
+- Do not implement backend functionality.
+- Do not create database tables yet.
+- Do not connect external APIs.
+- Do not implement AI yet.
+- Do not add fake agricultural data that could be interpreted as real-time information.
+- Do not add fake testimonials or fake customer statistics.
+- Do not claim guaranteed agricultural results.
+- Keep the application easy to extend later.
 
 Build the project with a clean, scalable structure so that authentication, database, AI, weather, soil, disease detection, and market APIs can be added in future phases without redesigning the entire application.
 

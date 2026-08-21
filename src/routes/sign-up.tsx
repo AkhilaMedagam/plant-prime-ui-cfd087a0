@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { AuthLayout } from "@/components/site/AuthLayout";
 import { GoogleAuthButton } from "@/components/site/GoogleAuthButton";
-
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -14,8 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
 import { friendlyAuthError, useAuth } from "@/lib/auth";
+import { db, doc, setDoc, serverTimestamp } from "@/lib/firebase";
 
 export const Route = createFileRoute("/sign-up")({
   head: () => ({
@@ -41,7 +40,7 @@ type Errors = { [K in keyof Fields | "terms"]?: string | undefined };
 
 function SignUp() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, signUpWithEmail } = useAuth();
   const [values, setValues] = useState<Fields>({
     name: "",
     email: "",
@@ -50,6 +49,7 @@ function SignUp() {
     confirm: "",
   });
   const [terms, setTerms] = useState(false);
+  const [language, setLanguage] = useState("english");
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -74,7 +74,7 @@ function SignUp() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim()))
       next.email = "Please enter a valid email address.";
     if (!values.phone.trim()) next.phone = "Please enter your phone number.";
-    if (values.password.length < 8) next.password = "Use at least 8 characters.";
+    if (values.password.length < 6) next.password = "Use at least 6 characters.";
     if (values.confirm !== values.password) next.confirm = "Passwords don't match.";
     if (!terms) next.terms = "Please accept the Terms & Conditions.";
     setErrors(next);
@@ -84,36 +84,38 @@ function SignUp() {
 
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: values.email.trim(),
-        password: values.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-          data: {
+      const newUser = await signUpWithEmail(
+        values.email.trim(),
+        values.password,
+        values.name.trim(),
+      );
+
+      if (newUser) {
+        // Save user profile in Firestore
+        await setDoc(
+          doc(db, "profiles", newUser.uid),
+          {
             full_name: values.name.trim(),
+            email: values.email.trim(),
             phone: values.phone.trim(),
+            preferred_language: language,
+            avatar_url: newUser.photoURL || null,
+            created_at: serverTimestamp(),
+            updated_at: serverTimestamp(),
           },
-        },
-      });
+          { merge: true },
+        );
 
-      if (error) {
-        setFormError(friendlyAuthError(error.message));
-        return;
+        await setDoc(
+          doc(db, "user_app_profiles", newUser.uid),
+          {
+            onboarding_completed: false,
+            created_at: serverTimestamp(),
+            updated_at: serverTimestamp(),
+          },
+          { merge: true },
+        );
       }
-
-      if (!data.session) {
-        setNotice("Almost there! Check your email to confirm your account, then sign in.");
-        return;
-      }
-
-      await supabase
-        .from("profiles")
-        .update({
-          full_name: values.name.trim(),
-          email: values.email.trim(),
-          phone: values.phone.trim(),
-        })
-        .eq("id", data.session.user.id);
 
       navigate({ to: "/dashboard", replace: true });
     } catch (error) {
@@ -186,9 +188,7 @@ function SignUp() {
               aria-invalid={Boolean(errors.password)}
               onChange={(e) => set("password")(e.target.value)}
             />
-            {errors.password ? (
-              <p className="text-sm text-destructive">{errors.password}</p>
-            ) : null}
+            {errors.password ? <p className="text-sm text-destructive">{errors.password}</p> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirm">Confirm Password</Label>
@@ -206,7 +206,7 @@ function SignUp() {
 
         <div className="space-y-2">
           <Label htmlFor="language">Preferred Language (optional)</Label>
-          <Select>
+          <Select value={language} onValueChange={setLanguage}>
             <SelectTrigger id="language" className="w-full">
               <SelectValue placeholder="Select a language" />
             </SelectTrigger>
@@ -249,7 +249,6 @@ function SignUp() {
         </div>
 
         <GoogleAuthButton label="Sign Up with Google" onError={setFormError} />
-
 
         {formError ? (
           <p

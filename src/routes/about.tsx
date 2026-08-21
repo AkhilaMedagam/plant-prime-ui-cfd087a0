@@ -19,8 +19,7 @@ export const Route = createFileRoute("/about")({
       { property: "og:title", content: "About AgriSmart" },
       {
         property: "og:description",
-        content:
-          "Technology designed to support smarter and more sustainable farming decisions.",
+        content: "Technology designed to support smarter and more sustainable farming decisions.",
       },
     ],
   }),
@@ -28,10 +27,26 @@ export const Route = createFileRoute("/about")({
 });
 
 const provides = [
-  { icon: Sprout, title: "Crop Information", description: "Details on crops and growing practices." },
-  { icon: FlaskConical, title: "Soil Insights", description: "Understand soil health and suitability." },
-  { icon: CloudSun, title: "Weather Information", description: "Conditions that shape daily farm work." },
-  { icon: Bug, title: "Disease Awareness", description: "Spot possible crop health problems early." },
+  {
+    icon: Sprout,
+    title: "Crop Information",
+    description: "Details on crops and growing practices.",
+  },
+  {
+    icon: FlaskConical,
+    title: "Soil Insights",
+    description: "Understand soil health and suitability.",
+  },
+  {
+    icon: CloudSun,
+    title: "Weather Information",
+    description: "Conditions that shape daily farm work.",
+  },
+  {
+    icon: Bug,
+    title: "Disease Awareness",
+    description: "Spot possible crop health problems early.",
+  },
   { icon: Coins, title: "Market Information", description: "Price and market trend context." },
   { icon: Bot, title: "AI Farming Assistance", description: "Ask questions, get guided answers." },
 ];

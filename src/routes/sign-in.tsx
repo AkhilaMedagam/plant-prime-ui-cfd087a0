@@ -2,12 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { AuthLayout } from "@/components/site/AuthLayout";
 import { GoogleAuthButton } from "@/components/site/GoogleAuthButton";
-
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { friendlyAuthError, useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/sign-in")({
@@ -16,7 +14,8 @@ export const Route = createFileRoute("/sign-in")({
       { title: "Sign In — AgriSmart" },
       {
         name: "description",
-        content: "Sign in to AgriSmart to continue exploring crop, soil, weather and market insights.",
+        content:
+          "Sign in to AgriSmart to continue exploring crop, soil, weather and market insights.",
       },
       { property: "og:title", content: "Sign In — AgriSmart" },
       { property: "og:description", content: "Sign in to continue to AgriSmart." },
@@ -27,7 +26,7 @@ export const Route = createFileRoute("/sign-in")({
 
 function SignIn() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, signInWithEmail } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -52,14 +51,7 @@ function SignIn() {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-      if (error) {
-        setFormError(friendlyAuthError(error.message));
-        return;
-      }
+      await signInWithEmail(email.trim(), password);
       navigate({ to: "/dashboard", replace: true });
     } catch (error) {
       setFormError(friendlyAuthError(error instanceof Error ? error.message : null));
@@ -129,7 +121,6 @@ function SignIn() {
         </div>
 
         <GoogleAuthButton label="Continue with Google" onError={setFormError} />
-
 
         {formError ? (
           <p

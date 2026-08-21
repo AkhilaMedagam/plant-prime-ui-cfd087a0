@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { lovable } from "@/integrations/lovable/index";
+import { useAuth } from "@/lib/auth";
 
 function GoogleIcon() {
   return (
@@ -33,27 +33,32 @@ export function GoogleAuthButton({
   onError: (message: string | null) => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const { signInWithGoogle } = useAuth();
 
   const handleClick = async () => {
     if (loading) return;
     setLoading(true);
     onError(null);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/auth/callback`,
-      });
-
-      if (result.error) {
-        onError("Google sign-in didn't work. Please try again.");
-        setLoading(false);
-        return;
+      await signInWithGoogle();
+    } catch (err) {
+      console.error("Google sign in error:", err);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      if (errorMsg.includes("popup-closed-by-user") || errorMsg.includes("cancelled")) {
+        onError("Google sign-in popup was closed.");
+      } else if (errorMsg.includes("popup-blocked") || errorMsg.includes("blocked")) {
+        onError(
+          "The Google sign-in popup was blocked by your browser. Please allow popups or open the app in a new tab.",
+        );
+      } else if (errorMsg.includes("unauthorized-domain")) {
+        onError(
+          "This domain is not yet authorized in Firebase Console. You can also sign up with email and password below.",
+        );
+      } else {
+        onError(
+          "Google sign-in could not be completed. You can also sign in or sign up using your email and password.",
+        );
       }
-
-      if (result.redirected) return;
-
-      window.location.href = "/auth/callback";
-    } catch {
-      onError("Couldn't reach Google right now. Check your connection and try again.");
       setLoading(false);
     }
   };

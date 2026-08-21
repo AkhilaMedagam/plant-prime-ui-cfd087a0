@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { db, collection, addDoc, serverTimestamp } from "@/lib/firebase";
 
 type Fields = { name: string; email: string; phone: string; message: string };
 type Errors = Partial<Record<keyof Fields, string>>;
@@ -20,8 +20,7 @@ function validate(values: Fields): Errors {
   if (!values.email.trim()) errors.email = "Please enter your email address.";
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim()))
     errors.email = "That email address doesn't look right.";
-  if (!values.phone.trim())
-    errors.phone = "Please enter your phone number.";
+  if (!values.phone.trim()) errors.phone = "Please enter your phone number.";
   else if (!/^[0-9()+\-\s]{7,20}$/.test(values.phone.trim()))
     errors.phone = "Please enter a valid phone number.";
   if (values.message.trim().length < 10)
@@ -56,24 +55,27 @@ export function ContactForm() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const { error } = await supabase.from("contact_submissions").insert({
-      full_name: values.name.trim(),
-      email: values.email.trim(),
-      phone: values.phone.trim(),
-      message: values.message.trim(),
-      status: "new",
-      user_id: user?.id ?? null,
-    });
+    try {
+      await addDoc(collection(db, "contact_submissions"), {
+        full_name: values.name.trim(),
+        email: values.email.trim(),
+        phone: values.phone.trim(),
+        message: values.message.trim(),
+        status: "new",
+        user_id: user?.uid ?? null,
+        created_at: serverTimestamp(),
+      });
 
-    setSubmitting(false);
-
-    if (error) {
-      setSubmitError("We could not submit your message. Please try again.");
-      return;
+      setValues(empty);
+      setSent(true);
+    } catch (err) {
+      console.error("Failed to submit contact message to Firestore:", err);
+      setSubmitError(
+        "We could not submit your message. Please check your connection and try again.",
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    setValues(empty);
-    setSent(true);
   };
 
   return (
@@ -157,7 +159,6 @@ function Field({
   type?: string;
   placeholder?: string;
 }) {
-
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>

@@ -96,7 +96,9 @@ function Dashboard() {
           <section className="rounded-2xl border border-border bg-card p-6 shadow-soft">
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="text-lg font-semibold">Getting started</h2>
-              <span className="text-sm text-muted-foreground">{doneCount} of {steps.length}</span>
+              <span className="text-sm text-muted-foreground">
+                {doneCount} of {steps.length}
+              </span>
             </div>
             <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
               <div

@@ -93,9 +93,14 @@ function AICoach() {
               <Bot className="h-5 w-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-bold leading-tight">AgriSmart AI Coach</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="truncate text-base font-bold leading-tight">AgriSmart AI Coach</h1>
+                <span className="hidden sm:inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                  Smart Farming Only
+                </span>
+              </div>
               <p className="truncate text-xs text-muted-foreground">
-                Smart farming guidance, on demand
+                Dedicated agricultural guidance for crops, soil, pests & weather
               </p>
             </div>
           </div>
@@ -121,11 +126,11 @@ function AICoach() {
                 <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
                   <Bot className="h-7 w-7" aria-hidden="true" />
                 </span>
-                <div className="space-y-1.5">
-                  <h3 className="text-base font-semibold">Ask the AgriSmart AI Coach</h3>
+                <div className="space-y-1.5 text-center">
+                  <h3 className="text-base font-semibold">AgriSmart Agricultural Coach</h3>
                   <p className="max-w-md text-sm text-muted-foreground">
-                    Get guidance on crops, soil health, weather planning and pest control. Start
-                    with a suggested question or ask your own.
+                    Exclusively for smart farming advice: crop care, soil health, fertilizer dosing,
+                    weather protection, and pest control.
                   </p>
                 </div>
                 <div className="mt-2 grid w-full max-w-lg gap-2 sm:grid-cols-2">
@@ -180,11 +185,14 @@ function AICoach() {
         {/* Composer */}
         <div className="shrink-0 border-t border-border p-3 sm:p-4">
           <PromptInput onSubmit={handleSubmit}>
-            <PromptInputTextarea autoFocus placeholder="Ask about crops, soil, weather, pests…" />
+            <PromptInputTextarea
+              autoFocus
+              placeholder="Ask a farming question (crops, soil, fertilizers, pests, irrigation)…"
+            />
             <PromptInputFooter className="justify-between gap-2">
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                AI guidance can be imperfect — verify before acting
+                Exclusively for Smart Farming & Agriculture Guidance
               </span>
               <PromptInputSubmit status={status} onStop={stop} disabled={status === "submitted"}>
                 {isLoading ? undefined : <SendHorizonal className="h-4 w-4" aria-hidden="true" />}

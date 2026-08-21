@@ -2,28 +2,232 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createUIMessageStream, createUIMessageStreamResponse, type UIMessage } from "ai";
 import { GoogleGenAI } from "@google/genai";
 
-const SYSTEM_PROMPT = `You are the AgriSmart AI Coach, an expert, friendly, and practical agricultural assistant.
-You help farmers, agronomists, and growers with:
-- Crop selection, planting schedules, and growth stages
-- Soil health, organic matter, pH balance, and fertilization recommendations
-- Weather planning and seasonal crop protection
-- Pest identification, disease management, and biological/chemical treatment suggestions
-- Modern and sustainable farming practices
+const SYSTEM_PROMPT = `You are the AgriSmart AI Coach, an expert, dedicated, and friendly agricultural advisor built solely for smart farming and precision agriculture.
 
-Keep your advice:
-- Clear, actionable, and easy to understand
-- Cautious and practical (encourage local testing and verification)
-- Structured with bullet points or steps when giving instructions
-- Supportive and encouraging`;
+CRITICAL MANDATORY DOMAIN RESTRICTION & GUARDRAILS:
+- You ONLY provide assistance on Smart Farming, Agriculture, Crop Management, Soil Health, Irrigation, Farm Weather planning, Pest & Disease Control, Organic Practices, Agricultural Technology, and Agro-Economics.
+- You are STRICTLY PROHIBITED from answering off-topic questions (e.g., general knowledge, recipes/food recommendations like "hyderabad famous food", tourism, movies, coding, sports, celebrities, finance outside farming, politics, casual banter, etc.).
+- If an off-topic query is received, you MUST politely and strictly decline with this message:
+  "I am AgriSmart AI Coach, dedicated exclusively to Smart Farming and Agricultural Guidance. I can only assist with topics such as crops, soil health, pest management, irrigation, and agricultural best practices. Please ask an agriculture-related question!"
+- For greetings (e.g., "hi", "hello", "hey", "namaste", "good morning"), respond warmly as an agricultural assistant:
+  "Hello! I am your AgriSmart AI Coach, dedicated exclusively to smart farming, crop cultivation, soil health, and agricultural guidance. How can I help with your crops or farm today?"
+- For gibberish, random characters, or incomprehensible input (e.g., "hugul,;ohhv"), politely state:
+  "I couldn't understand that. AgriSmart AI Coach is dedicated exclusively to smart farming. Please ask a specific question about your crops, soil conditions, pests, weather, or farming practices."
+
+When answering valid agricultural queries:
+- Provide accurate, practical, and actionable agronomic advice.
+- Use clear bullet points and structured sections.
+- Emphasize sustainable, eco-friendly, and cost-effective farming methods.`;
+
+function isGibberishOrNonsense(input: string): boolean {
+  const clean = input.trim();
+  if (clean.length < 2) return true;
+
+  // High proportion of unusual punctuation/symbols or weird non-alphanumeric mix
+  const alphaChars = clean.replace(/[^a-zA-Z]/g, "").length;
+  const punctuationCount = clean.replace(/[a-zA-Z0-9\s]/g, "").length;
+  if (clean.length > 4 && punctuationCount / clean.length > 0.3) return true;
+  if (alphaChars < 3 && clean.length > 5) return true;
+
+  // Words with no vowels in long sequences or gibberish patterns like "hugul,;ohhv", "asdfghjk"
+  const words = clean.split(/\s+/);
+  if (words.length === 1 && clean.length > 8 && !/[aeiou]/i.test(clean)) {
+    return true;
+  }
+
+  return false;
+}
+
+const GREETINGS = [
+  "hi",
+  "hello",
+  "hey",
+  "namaste",
+  "good morning",
+  "good afternoon",
+  "good evening",
+  "howdy",
+  "greetings",
+  "hi coach",
+  "hello coach",
+  "hi agrismart",
+];
+
+const OFF_TOPIC_KEYWORDS = [
+  "food",
+  "famous food",
+  "hyderabad",
+  "biryani",
+  "recipe",
+  "restaurant",
+  "movie",
+  "film",
+  "cinema",
+  "actor",
+  "actress",
+  "song",
+  "music",
+  "sports",
+  "cricket",
+  "football",
+  "travel",
+  "tourism",
+  "hotel",
+  "flight",
+  "game",
+  "gaming",
+  "code",
+  "programming",
+  "python",
+  "javascript",
+  "html",
+  "css",
+  "crypto",
+  "bitcoin",
+  "politics",
+  "president",
+  "minister",
+  "joke",
+  "love",
+  "dating",
+  "car",
+  "bike",
+  "laptop",
+  "phone",
+];
+
+const FARMING_KEYWORDS = [
+  "crop",
+  "soil",
+  "pest",
+  "insect",
+  "disease",
+  "fertiliz",
+  "nitrogen",
+  "urea",
+  "npk",
+  "phosphorus",
+  "potash",
+  "water",
+  "irrigat",
+  "weather",
+  "rain",
+  "monsoon",
+  "drought",
+  "frost",
+  "heat",
+  "sow",
+  "plant",
+  "seed",
+  "harvest",
+  "yield",
+  "farm",
+  "agri",
+  "field",
+  "paddy",
+  "rice",
+  "wheat",
+  "cotton",
+  "maize",
+  "corn",
+  "tomato",
+  "chilli",
+  "chili",
+  "onion",
+  "sugarcane",
+  "banana",
+  "mustard",
+  "pulse",
+  "gram",
+  "vegetable",
+  "fruit",
+  "organic",
+  "compost",
+  "manure",
+  "weed",
+  "herbicide",
+  "fungicid",
+  "pesticid",
+  "ph",
+  "salin",
+  "alkali",
+  "acid",
+  "lime",
+  "gypsum",
+  "tractor",
+  "mulch",
+  "loam",
+  "clay",
+  "drip",
+];
 
 function generateLocalAgronomyAdvice(userQuery: string): string {
-  const q = userQuery.toLowerCase();
+  const q = userQuery.toLowerCase().trim();
 
+  // 1. Check for gibberish/nonsense
+  if (isGibberishOrNonsense(q)) {
+    return `### 🌾 AgriSmart AI Coach Notice
+
+I couldn't understand your input ("*${userQuery.slice(0, 40)}*").
+
+Please note that **AgriSmart AI Coach** is strictly dedicated to **Smart Farming, Agriculture, Crop Care, and Soil Management**.
+
+Please ask a specific question regarding:
+- **Crop Planning & Selection** (Paddy, Wheat, Cotton, Chilli, Vegetables)
+- **Soil Nutrients & pH Correction** (Nitrogen, NPK, Organic Compost, Lime/Gypsum)
+- **Pest & Disease Control** (Organic bio-repellents, IPM, Fungicides)
+- **Water & Irrigation Scheduling** (Drip methods, moisture conservation)
+- **Weather & Seasonal Farm Protection** (Frost, heatwaves, heavy rain)`;
+  }
+
+  // 2. Check for simple greetings
+  const isGreeting =
+    GREETINGS.includes(q) ||
+    GREETINGS.some((g) => q === g || q.startsWith(`${g} `) || q.endsWith(` ${g}`));
+
+  if (isGreeting && !FARMING_KEYWORDS.some((kw) => q.includes(kw))) {
+    return `### 👋 Welcome to AgriSmart AI Coach!
+
+I am your dedicated **Smart Farming Assistant**, built exclusively to provide expert agricultural guidance for your farm and crops.
+
+**How can I help you today?**
+- 🌾 **Crop Cultivation**: Recommended sowing schedules, varieties, and yield optimization.
+- 🌱 **Soil & Fertilizers**: Nitrogen balance, NPK dosage, biofertilizers, and pH adjustment.
+- 🐛 **Pest & Disease Diagnostics**: Early symptoms identification and biological/chemical controls.
+- 💧 **Smart Irrigation**: Efficient water scheduling and micro-drip techniques.
+- 🌦️ **Weather Planning**: Actionable steps to protect crops from heat, frost, or unseasonal rains.
+
+*Feel free to ask any farming question or describe the condition of your crops!*`;
+  }
+
+  // 3. Check for off-topic non-farming queries
+  const hasOffTopic = OFF_TOPIC_KEYWORDS.some((kw) => q.includes(kw));
+  const hasFarmingTerm = FARMING_KEYWORDS.some((kw) => q.includes(kw));
+
+  if (hasOffTopic && !hasFarmingTerm) {
+    return `### 🚫 AgriSmart AI Coach — Domain Restriction
+
+I am the **AgriSmart AI Coach**, dedicated **exclusively to Smart Farming, Crop Advisory, Soil Management, and Precision Agriculture**.
+
+I cannot answer questions about general topics, food/recipes, entertainment, or non-agricultural subjects.
+
+---
+
+**Please ask me about your farm and crops, such as:**
+- 🌾 **Crops & Cultivation**: *"What are the best companion crops for tomatoes?"*
+- 🌱 **Soil Health & Nutrition**: *"How do I increase soil nitrogen naturally?"*
+- 🐛 **Pest & Disease Management**: *"How do I control whiteflies and aphids?"*
+- 💧 **Irrigation & Water Conservation**: *"When should I irrigate during dry weather?"*
+- 🌦️ **Weather & Seasonal Advice**: *"How to safeguard paddy fields against waterlogging?"*`;
+  }
+
+  // 4. Detailed Agricultural Handlers
   if (
     q.includes("nitrogen") ||
     q.includes("fertiliz") ||
     q.includes("nutrient") ||
-    q.includes("urea")
+    q.includes("urea") ||
+    q.includes("npk")
   ) {
     return `### Soil Nutrient & Nitrogen Management Advisory
 
@@ -199,6 +403,7 @@ Agro-meteorological protection measures for fluctuating weather conditions:
     q.includes("maize") ||
     q.includes("banana") ||
     q.includes("chilli") ||
+    q.includes("chili") ||
     q.includes("onion")
   ) {
     return `### Specialized Cash & Horticultural Crop Advisory
@@ -253,7 +458,9 @@ Water management guidelines for optimal crop growth:
    - Apply 3–4 inches of organic straw or plastic mulch to conserve root-zone soil moisture and suppress weed competition.`;
   }
 
-  return `### AgriSmart Crop & Farm Guidance
+  // 5. If it contains general agricultural words, provide general farm guidance
+  if (hasFarmingTerm) {
+    return `### AgriSmart Crop & Farm Guidance
 
 Here are practical agricultural principles for your farm:
 
@@ -262,7 +469,18 @@ Here are practical agricultural principles for your farm:
 - **Pest Surveillance**: Inspect fields weekly for early symptoms of leaf spots, rusts, and sucking pests.
 - **Input Optimization**: Balance chemical fertilizers with bio-fertilizers and micronutrients (Zinc, Boron, Sulfur).
 
-*Please specify your crop type, soil condition, or region if you need customized advice!*`;
+*Please specify your crop type, soil condition, or region for tailored recommendations!*`;
+  }
+
+  // 6. Unrecognized or non-farming query fallback
+  return `### 🌾 AgriSmart AI Coach Notice
+
+I am specialized strictly in **Smart Farming, Crop Management, Soil Health, and Precision Agriculture**.
+
+I couldn't identify a farming-related topic in your question. Please ask about:
+- Crop health, sowing schedules, or disease symptoms
+- Soil test interpretation, fertilizers, or pH correction
+- Pest control, organic formulations, or irrigation methods`;
 }
 
 function createTextStreamResponse(fullText: string): Response {

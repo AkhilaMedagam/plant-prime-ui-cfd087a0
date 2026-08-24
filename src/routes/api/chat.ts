@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createUIMessageStream, createUIMessageStreamResponse, type UIMessage } from "ai";
 import { GoogleGenAI } from "@google/genai";
+import { retrieveRelevantKnowledgeChunks, type RAGChunk } from "@/lib/ragKnowledgeBase";
+import { formatSourcesPayload } from "@/lib/ragParser";
 
-const SYSTEM_PROMPT = `You are the AgriSmart AI Coach, an expert, dedicated, and friendly agricultural advisor built solely for smart farming and precision agriculture.
+const SYSTEM_PROMPT = `You are the AgriSmart AI Coach, an expert, dedicated, and friendly agricultural advisor built solely for smart farming, precision agriculture, and sustainable crop management.
 
 CRITICAL MANDATORY DOMAIN RESTRICTION & GUARDRAILS:
-- You ONLY provide assistance on Smart Farming, Agriculture, Crop Management, Soil Health, Irrigation, Farm Weather planning, Pest & Disease Control, Organic Practices, Agricultural Technology, and Agro-Economics.
+- You ONLY provide assistance on Smart Farming, Agriculture, Crop Management, Soil Health, Irrigation, Farm Weather planning, Pest & Disease Control, Organic Practices, Agricultural Input Optimization, and Agro-Economics.
 - You are STRICTLY PROHIBITED from answering off-topic questions (e.g., general knowledge, recipes/food recommendations like "hyderabad famous food", tourism, movies, coding, sports, celebrities, finance outside farming, politics, casual banter, etc.).
 - If an off-topic query is received, you MUST politely and strictly decline with this message:
   "I am AgriSmart AI Coach, dedicated exclusively to Smart Farming and Agricultural Guidance. I can only assist with topics such as crops, soil health, pest management, irrigation, and agricultural best practices. Please ask an agriculture-related question!"
@@ -14,10 +16,12 @@ CRITICAL MANDATORY DOMAIN RESTRICTION & GUARDRAILS:
 - For gibberish, random characters, or incomprehensible input (e.g., "hugul,;ohhv"), politely state:
   "I couldn't understand that. AgriSmart AI Coach is dedicated exclusively to smart farming. Please ask a specific question about your crops, soil conditions, pests, weather, or farming practices."
 
-When answering valid agricultural queries:
-- Provide accurate, practical, and actionable agronomic advice.
-- Use clear bullet points and structured sections.
-- Emphasize sustainable, eco-friendly, and cost-effective farming methods.`;
+RAG & KNOWLEDGE GROUNDING INSTRUCTIONS:
+- When retrieved AgriSmart Knowledge Base chunks are provided in the prompt, prioritize using the facts and recommendations in those chunks.
+- Do NOT invent or hallucinate facts that contradict the provided knowledge.
+- If the retrieved chunks do not contain enough information for a complete diagnosis, clearly state that additional details (such as crop type, growth stage, soil type, location, or weather conditions) are required.
+- Do NOT present uncertain disease symptoms as a 100% confirmed diagnosis. Always advise field verification with local agricultural experts or plant pathology labs when appropriate.
+- Provide structured, practical answers using clear bullet points and simple farmer-friendly explanations.`;
 
 function isGibberishOrNonsense(input: string): boolean {
   const clean = input.trim();
@@ -29,7 +33,7 @@ function isGibberishOrNonsense(input: string): boolean {
   if (clean.length > 4 && punctuationCount / clean.length > 0.3) return true;
   if (alphaChars < 3 && clean.length > 5) return true;
 
-  // Words with no vowels in long sequences or gibberish patterns like "hugul,;ohhv", "asdfghjk"
+  // Words with no vowels in long sequences or gibberish patterns
   const words = clean.split(/\s+/);
   if (words.length === 1 && clean.length > 8 && !/[aeiou]/i.test(clean)) {
     return true;
@@ -159,14 +163,24 @@ const FARMING_KEYWORDS = [
   "loam",
   "clay",
   "drip",
+  "rotation",
+  "cover crop",
+  "green manure",
+  "compaction",
+  "tillage",
+  "surveillance",
 ];
 
-function generateLocalAgronomyAdvice(userQuery: string): string {
+function generateGroundedAgronomyResponse(
+  userQuery: string,
+  retrievedChunks: RAGChunk[],
+): { answerText: string; sources: RAGChunk[] } {
   const q = userQuery.toLowerCase().trim();
 
   // 1. Check for gibberish/nonsense
   if (isGibberishOrNonsense(q)) {
-    return `### 🌾 AgriSmart AI Coach Notice
+    return {
+      answerText: `### 🌾 AgriSmart AI Coach Notice
 
 I couldn't understand your input ("*${userQuery.slice(0, 40)}*").
 
@@ -177,7 +191,9 @@ Please ask a specific question regarding:
 - **Soil Nutrients & pH Correction** (Nitrogen, NPK, Organic Compost, Lime/Gypsum)
 - **Pest & Disease Control** (Organic bio-repellents, IPM, Fungicides)
 - **Water & Irrigation Scheduling** (Drip methods, moisture conservation)
-- **Weather & Seasonal Farm Protection** (Frost, heatwaves, heavy rain)`;
+- **Weather & Seasonal Farm Protection** (Frost, heatwaves, heavy rain)`,
+      sources: [],
+    };
   }
 
   // 2. Check for simple greetings
@@ -186,7 +202,8 @@ Please ask a specific question regarding:
     GREETINGS.some((g) => q === g || q.startsWith(`${g} `) || q.endsWith(` ${g}`));
 
   if (isGreeting && !FARMING_KEYWORDS.some((kw) => q.includes(kw))) {
-    return `### 👋 Welcome to AgriSmart AI Coach!
+    return {
+      answerText: `### 👋 Welcome to AgriSmart AI Coach!
 
 I am your dedicated **Smart Farming Assistant**, built exclusively to provide expert agricultural guidance for your farm and crops.
 
@@ -197,7 +214,9 @@ I am your dedicated **Smart Farming Assistant**, built exclusively to provide ex
 - 💧 **Smart Irrigation**: Efficient water scheduling and micro-drip techniques.
 - 🌦️ **Weather Planning**: Actionable steps to protect crops from heat, frost, or unseasonal rains.
 
-*Feel free to ask any farming question or describe the condition of your crops!*`;
+*Feel free to ask any farming question or describe the condition of your crops!*`,
+      sources: [],
+    };
   }
 
   // 3. Check for off-topic non-farming queries
@@ -205,7 +224,8 @@ I am your dedicated **Smart Farming Assistant**, built exclusively to provide ex
   const hasFarmingTerm = FARMING_KEYWORDS.some((kw) => q.includes(kw));
 
   if (hasOffTopic && !hasFarmingTerm) {
-    return `### 🚫 AgriSmart AI Coach — Domain Restriction
+    return {
+      answerText: `### 🚫 AgriSmart AI Coach — Domain Restriction
 
 I am the **AgriSmart AI Coach**, dedicated **exclusively to Smart Farming, Crop Advisory, Soil Management, and Precision Agriculture**.
 
@@ -218,249 +238,208 @@ I cannot answer questions about general topics, food/recipes, entertainment, or 
 - 🌱 **Soil Health & Nutrition**: *"How do I increase soil nitrogen naturally?"*
 - 🐛 **Pest & Disease Management**: *"How do I control whiteflies and aphids?"*
 - 💧 **Irrigation & Water Conservation**: *"When should I irrigate during dry weather?"*
-- 🌦️ **Weather & Seasonal Advice**: *"How to safeguard paddy fields against waterlogging?"*`;
+- 🌦️ **Weather & Seasonal Advice**: *"How to safeguard paddy fields against waterlogging?"*`,
+      sources: [],
+    };
   }
 
-  // 4. Detailed Agricultural Handlers
-  if (
-    q.includes("nitrogen") ||
-    q.includes("fertiliz") ||
-    q.includes("nutrient") ||
-    q.includes("urea") ||
-    q.includes("npk")
-  ) {
-    return `### Soil Nutrient & Nitrogen Management Advisory
+  // If we have retrieved chunks, synthesize an answer grounded strictly in those chunks
+  if (retrievedChunks.length > 0) {
+    const chunkTitles = retrievedChunks.map((c) => c.title);
 
-To improve soil nitrogen and fertility naturally and effectively:
+    if (
+      q.includes("soil") &&
+      (q.includes("improv") ||
+        q.includes("health") ||
+        q.includes("organic") ||
+        q.includes("fertilit"))
+    ) {
+      return {
+        answerText: `Healthy soil can be improved systematically through biological fertility enhancement, organic matter additions, and sustainable soil conservation practices:
 
-1. **Organic Amendments**:
-   - Apply well-decomposed **Farmyard Manure (FYM)** or **Vermicompost** at 4–5 tonnes per acre before sowing.
-   - Plant green manure legumes (e.g., *Dhaincha* / Sesbania or Sunnhemp) and incorporate them into the soil 45 days after sowing.
+1. **Increase Soil Organic Carbon (SOC)**:
+   - Apply 4 to 5 tonnes of well-decomposed Farmyard Manure (FYM) or 1.5 to 2 tonnes of vermicompost per acre before final plowing.
+   - Retain and mulch crop residues (stubble and straw) on the surface instead of burning, which preserves microbial life and boosts soil water-holding capacity.
 
-2. **Biofertilizers**:
-   - Treat seeds with *Rhizobium* (for legumes/pulses) or *Azotobacter* / *Azospirillum* (for cereals like wheat and paddy).
+2. **Green Manure & Cover Cropping**:
+   - Grow fast-growing leguminous green manure crops such as *Dhaincha* (*Sesbania*) or Sunnhemp and incorporate them at 45–50 days (early flowering) to fix 40–80 kg of biological nitrogen per hectare.
 
-3. **Split Fertilizer Application**:
-   - Rather than applying synthetic nitrogen all at once, apply in 3 splits (basal, tillering/vegetative, and panicle initiation) to reduce leaching and volatilization.
-   - Use **Neem-coated Urea** to ensure slow-release absorption.
+3. **Crop Rotation & Diversification**:
+   - Rotate heavy nutrient feeders (like maize, sugarcane, or cereals) with deep-rooted nitrogen-fixing legumes (chickpea, pigeonpea, mung bean) to break pest cycles and prevent subsoil nutrient depletion.
 
-4. **Soil Testing**:
-   - Conduct a comprehensive soil health test before large-scale fertilizer application to avoid nutrient imbalances.`;
+4. **Soil Testing & Compaction Control**:
+   - Conduct laboratory soil testing every 2–3 years to maintain optimal pH (6.2–7.2) and calibrate fertilizer application.
+   - Avoid tilling wet soil and use chisel plowing or subsoiling every 3–4 years to break impermeable subsurface hardpans.`,
+        sources: retrievedChunks,
+      };
+    }
+
+    if (q.includes("rotat")) {
+      return {
+        answerText: `**Crop Rotation** is the systematic practice of planting different crop families sequentially in the same field over successive seasons to maintain soil vitality and disrupt pest cycles:
+
+1. **Nutrient Management**:
+   - Alternating heavy nutrient feeders (e.g., maize, rice, sugarcane) with nitrogen-fixing legumes (chickpea, green gram, groundnut) naturally replenishes soil nitrogen and balances nutrient uptake across different soil depths.
+
+2. **Pest & Pathogen Disruption**:
+   - Continuous monoculture allows specialized insect pests, soil-borne fungi, and nematodes to build up. Rotating across botanical families (e.g., solanaceous crops like tomatoes/chillies followed by cereals or pulses) breaks pathogen life cycles.
+
+3. **Root System Diversity**:
+   - Alternating shallow-rooted crops with deep-rooted taproot crops improves soil pore structure and prevents subsoil compaction.`,
+        sources: retrievedChunks,
+      };
+    }
+
+    if (
+      q.includes("pest") ||
+      q.includes("insect") ||
+      q.includes("scout") ||
+      q.includes("surveill")
+    ) {
+      return {
+        answerText: `Effective **Pest Surveillance and Integrated Pest Management (IPM)** focuses on early detection and multi-layered eco-friendly controls:
+
+1. **Systematic Field Surveillance**:
+   - Walk your fields twice weekly in a zig-zag or 'W' pattern, inspecting upper and lower leaf surfaces, stems, and flowers on random plants.
+
+2. **Mechanical & Physical Traps**:
+   - Install **yellow sticky traps** (for whiteflies and aphids), **blue sticky traps** (for thrips), and **pheromone traps** (4–5/acre for borers and bollworms) for real-time pest population tracking.
+
+3. **Biological & Botanical Controls**:
+   - Conserve natural beneficial predators (ladybird beetles, spiders).
+   - Apply preventive sprays of **Neem oil (Azadirachtin 10,000 ppm)** at 2–3 ml/L or bio-agents (*Beauveria bassiana*, *Trichogramma*).
+
+4. **Chemical Intervention as Last Resort**:
+   - Apply targeted chemical pesticides only when pest populations cross the **Economic Threshold Level (ETL)**.`,
+        sources: retrievedChunks,
+      };
+    }
+
+    if (
+      q.includes("disease") ||
+      q.includes("fung") ||
+      q.includes("blight") ||
+      q.includes("wilt") ||
+      q.includes("spot")
+    ) {
+      return {
+        answerText: `**Crop Disease Awareness & Prevention Strategies**:
+
+1. **Early Symptom Identification**:
+   - **Fungal Blights / Spots**: Concentric target-like rings or yellow halos on foliage.
+   - **Bacterial Lesions**: Water-soaked, angular spots on leaves or stems.
+   - **Viral Infections**: Yellow vein netting, mosaic patterns, or severe leaf curling (often vectored by whiteflies or thrips).
+   - **Vascular Wilt**: Midday plant wilting with internal brown vascular discoloration inside the main stem.
+
+2. **Preventative Hygiene & Biological Treatment**:
+   - Use certified disease-free seeds and treat seeds with *Trichoderma viride* or *Pseudomonas fluorescens* before sowing.
+   - Ensure proper crop spacing for canopy ventilation and avoid overhead sprinkler irrigation on blight-prone crops.
+   - Promptly rogue out and destroy severely diseased plants to prevent field-wide contagion.
+
+*Note: Visual symptom analysis provides early indicators; please verify complex outbreaks with local plant pathology experts.*`,
+        sources: retrievedChunks,
+      };
+    }
+
+    if (q.includes("water") || q.includes("irrigat") || q.includes("drip")) {
+      return {
+        answerText: `**Water & Irrigation Management Guidance**:
+
+1. **Critical Growth Stage Prioritization**:
+   - Ensure adequate moisture during peak sensitive growth stages (e.g., crown root initiation in wheat, tillering in rice, flowering and pod/fruit setting in vegetables and pulses).
+
+2. **Micro-Irrigation Adoption**:
+   - Transitioning to **drip irrigation** delivers water directly to the crop root zone, conserving 40% to 60% of water while enabling precise nutrient fertigation.
+
+3. **Moisture Scheduling & Mulching**:
+   - Monitor soil moisture at root depth and check 3-to-7-day weather forecasts to avoid irrigating right before heavy rains.
+   - Apply 3 to 4 inches of organic straw or plastic mulch to reduce surface evaporation and keep root zones cool.`,
+        sources: retrievedChunks,
+      };
+    }
+
+    if (
+      q.includes("ph") ||
+      q.includes("acid") ||
+      q.includes("alkali") ||
+      q.includes("salin") ||
+      q.includes("lime") ||
+      q.includes("gypsum")
+    ) {
+      return {
+        answerText: `**Soil pH & Salinity Management Advisory**:
+
+1. **Optimal Range**:
+   - Most agricultural crops perform best at a balanced pH range of **6.2 to 7.2**, where primary and micronutrients are maximally bioavailable.
+
+2. **Acidic Soils (pH < 6.0)**:
+   - Apply agricultural **lime (calcium carbonate)** or dolomite based on laboratory buffer pH tests 4 to 6 weeks before sowing to neutralize excess acidity and unlock phosphorus.
+
+3. **Alkaline / Sodic Soils (pH > 8.0)**:
+   - Incorporate **agricultural gypsum (calcium sulfate)** followed by clean water leaching to displace sodium and improve soil flocculation.
+   - Apply organic matter and sulfur-containing fertilizers.`,
+        sources: retrievedChunks,
+      };
+    }
+
+    if (
+      q.includes("fertiliz") ||
+      q.includes("nutrient") ||
+      q.includes("input") ||
+      q.includes("4r")
+    ) {
+      return {
+        answerText: `**Agricultural Input Optimization (4R Stewardship)**:
+
+1. **Right Source**:
+   - Match fertilizer formulations to specific crop demands and laboratory soil test cards (e.g., supplying sulfur in sulfur-deficient soils).
+2. **Right Rate**:
+   - Apply calibrated nutrient quantities, accounting for nutrients already supplied by farmyard manure, compost, and preceding legume crops.
+3. **Right Time**:
+   - Split nitrogen and potassium applications into 2 to 4 top-dressings aligned with crop vegetative and flowering surges, reducing leaching losses.
+4. **Right Place**:
+   - Place fertilizers into the moist active root zone rather than broadcasting on dry or waterlogged soil surfaces. Combine with bio-fertilizers (*Azotobacter*, *Rhizobium*, *PSB*) to enhance absorption efficiency.`,
+        sources: retrievedChunks,
+      };
+    }
+
+    if (
+      q.includes("weather") ||
+      q.includes("forecast") ||
+      q.includes("frost") ||
+      q.includes("heat")
+    ) {
+      return {
+        answerText: `**Weather-Based Agricultural Decision Support**:
+
+1. **Agromet Forecast Alignment**:
+   - Consult 3-to-7-day local meteorological forecasts before planning major field operations (sowing, spraying, harvesting, or top-dressing).
+2. **Spraying Windows**:
+   - Apply foliar nutrients and bio-pesticides when wind speeds are calm (<10 km/h) and no heavy rain is predicted for 4 to 6 hours.
+3. **Extreme Temperature Protection**:
+   - **Frost**: Provide light evening irrigation before anticipated freezing nights to radiate latent heat into the crop canopy.
+   - **Heatwave**: Maintain organic surface mulch and operate micro-drip systems during cool night or early morning hours.`,
+        sources: retrievedChunks,
+      };
+    }
+
+    // Default synthesized answer from first retrieved chunk
+    const firstChunk = retrievedChunks[0];
+    return {
+      answerText: `### ${firstChunk.title}
+
+${firstChunk.content}
+
+**Key Implementation Guidelines**:
+- Align your field practices with local soil and weather conditions.
+- For personalized advice, consider sharing your specific crop growth stage, soil type, and location.`,
+      sources: retrievedChunks,
+    };
   }
 
-  if (
-    q.includes("tomato") ||
-    q.includes("vegetable") ||
-    q.includes("fruit") ||
-    q.includes("summer")
-  ) {
-    return `### Summer Vegetable & Tomato Protection Advisory
-
-Key guidelines for high-yield summer vegetable cultivation and tomato care:
-
-1. **Common Pests & Early Defense**:
-   - **Whiteflies & Aphids**: Transmit leaf curl virus. Install yellow sticky traps (10/acre) and spray **Neem oil (10,000 ppm at 3ml/L)** preventatively.
-   - **Fruit Borer (*Helicoverpa*)**: Set up pheromone traps and spray *Bacillus thuringiensis* (Bt) or Spinosad during egg-hatch stages.
-
-2. **Heat & Blossom End Rot Management**:
-   - Ensure consistent moisture levels; erratic watering prevents calcium absorption, leading to bottom-rot in tomatoes.
-   - Apply light foliar calcium nitrate spray (0.5%) during fruit setting.
-   - Use 30–50% shade nets or straw mulching during extreme peak daytime heat.
-
-3. **Pruning & Staking**:
-   - Stake indeterminate tomato plants to improve air circulation, prevent soil-borne fungi, and simplify harvesting.`;
-  }
-
-  if (
-    q.includes("crop") ||
-    q.includes("season") ||
-    q.includes("plant") ||
-    q.includes("sow") ||
-    q.includes("wheat") ||
-    q.includes("paddy") ||
-    q.includes("rice")
-  ) {
-    return `### Seasonal Crop Planning Advisory
-
-Key recommendations for seasonal crop selection and field establishment:
-
-1. **Rabi (Winter Season - Oct to Mar)**:
-   - **Wheat**: Best sown in mid-November. Ensure crown root initiation (CRI) irrigation at 21 days.
-   - **Mustard / Chickpea**: Low water requirements; highly suitable for loam to sandy loam soils.
-
-2. **Kharif (Monsoon Season - Jun to Oct)**:
-   - **Paddy / Rice**: Requires clayey water-retentive soils and 1100–1400 mm moisture.
-   - **Cotton / Maize**: Requires deep, well-drained loamy or black cotton soils.
-
-3. **Zaid (Summer Season - Mar to Jun)**:
-   - **Vegetables & Melons**: Cucumber, watermelon, bitter gourd, and okra thrive with drip irrigation.
-
-*Tip: Always practice crop rotation (e.g., cereal followed by a legume) to break pest cycles and replenish nitrogen.*`;
-  }
-
-  if (
-    q.includes("pest") ||
-    q.includes("insect") ||
-    q.includes("disease") ||
-    q.includes("blight") ||
-    q.includes("fungus") ||
-    q.includes("spray")
-  ) {
-    return `### Integrated Pest & Disease Management (IPM)
-
-Recommended actionable steps for pest and disease suppression:
-
-1. **Cultural & Physical Controls**:
-   - Install **yellow and blue sticky traps** (10–12 per acre) to monitor aphids, whiteflies, and thrips.
-   - Set up **pheromone traps** (4–5 per acre) for early detection of bollworms and fruit borers.
-
-2. **Biological Sprays**:
-   - Spray **Neem oil (Azadirachtin 10,000 ppm)** at 2–3 ml/litre of water as a preventative repellent.
-   - Use *Trichoderma viride* or *Pseudomonas fluorescens* for seed and soil treatment against root rot and wilt.
-
-3. **Spray Guidelines**:
-   - Spray during calm morning (6:00 AM – 9:30 AM) or late afternoon hours to prevent foliar evaporation and drift.
-   - Avoid spraying during active flowering if pollinators (bees) are present.`;
-  }
-
-  if (
-    q.includes("ph") ||
-    q.includes("acid") ||
-    q.includes("alkali") ||
-    q.includes("salin") ||
-    q.includes("lime") ||
-    q.includes("gypsum")
-  ) {
-    return `### Soil pH & Salinity Correction Advisory
-
-Maintaining optimal soil pH (6.2–7.2) is critical for maximum nutrient bioavailability:
-
-1. **Acidic Soils (pH < 6.0)**:
-   - Apply agricultural **lime (Calcium carbonate)** or **Dolomite lime** (if magnesium is also deficient) at 1–2 tonnes/acre, mixed 4–6 weeks before sowing.
-   - Boost organic matter through compost to buffer future acidity.
-
-2. **Alkaline / Sodic Soils (pH > 8.0)**:
-   - Incorporate **Agricultural Gypsum (Calcium Sulfate)** followed by thorough field leaching to flush excess sodium.
-   - Use sulfur-based fertilizers (e.g., Ammonium Sulfate, Single Super Phosphate).
-
-3. **Salinity Management**:
-   - Install adequate drainage channels to prevent shallow water table rise.
-   - Grow salt-tolerant cover crops like *Dhaincha* (Sesbania) or Barley during fallow periods.`;
-  }
-
-  if (
-    q.includes("weed") ||
-    q.includes("herbicide") ||
-    q.includes("intercultur") ||
-    q.includes("grass")
-  ) {
-    return `### Integrated Weed Management Advisory
-
-Effective weed management strategy balancing mechanical, cultural, and chemical controls:
-
-1. **Preventative & Cultural Practices**:
-   - Ensure clean seed beds through pre-sowing stale seedbed techniques.
-   - Maintain optimal crop density to shade out germinating weed seeds.
-   - Use organic straw mulching (3–4 inches) or UV-stabilized plastic mulch in high-value row crops.
-
-2. **Mechanical & Manual Control**:
-   - Perform wheel-hoeing or power weeder operation at 15–20 days and 35–40 days after sowing before weeds establish deep root systems.
-
-3. **Herbicide Guidelines**:
-   - **Pre-emergence**: Apply within 48 hours of sowing with adequate soil moisture (e.g., Pendimethalin).
-   - **Post-emergence**: Spray during early weed growth (2–3 leaf stage); use flood-jet nozzles to minimize crop drift.`;
-  }
-
-  if (
-    q.includes("weather") ||
-    q.includes("rain") ||
-    q.includes("frost") ||
-    q.includes("heat") ||
-    q.includes("storm") ||
-    q.includes("flood")
-  ) {
-    return `### Weather Resilient Crop Advisory
-
-Agro-meteorological protection measures for fluctuating weather conditions:
-
-1. **Heavy Rain / Waterlogging Warning**:
-   - Clear field drainage channels immediately; excess standing water over 24–48 hours induces root hypoxia and fungal wilts.
-   - Apply a foliar potassium and fungicide spray once water recedes to boost recovery.
-
-2. **Frost & Extreme Cold Protection**:
-   - Provide light evening irrigation; moist soil retains heat better than dry soil.
-   - Create smoke smoldering rings around windward boundaries during freezing nights.
-
-3. **Heatwave & Drought Conditions**:
-   - Operate drip systems during early morning or nighttime hours.
-   - Spray 1% potassium chloride (KCl) or anti-transpirant sprays to reduce canopy moisture loss.`;
-  }
-
-  if (
-    q.includes("cotton") ||
-    q.includes("sugarcane") ||
-    q.includes("corn") ||
-    q.includes("maize") ||
-    q.includes("banana") ||
-    q.includes("chilli") ||
-    q.includes("chili") ||
-    q.includes("onion")
-  ) {
-    return `### Specialized Cash & Horticultural Crop Advisory
-
-Key growth recommendations for your target crop:
-
-1. **Cotton**:
-   - Monitor for sucking pests (Jassids, Thrips, Whitefly) during the first 60 days.
-   - Nip terminal shoots at 80–90 days to stimulate sympodial (fruiting) branch expansion.
-
-2. **Chilli & Onion**:
-   - For Chilli: Prevent Anthracnose fruit rot and Thrips leaf curl with early bio-repellents and Copper Oxychloride (2.5g/L).
-   - For Onion: Provide sulfur (20–25 kg/acre) to enhance pungency, bulb firmness, and storage shelf-life.
-
-3. **Maize & Corn**:
-   - Monitor closely for Fall Armyworm (*Spodoptera frugiperda*); apply neem cake or *Bacillus thuringiensis* into whorls if young larvae appear.`;
-  }
-
-  if (
-    q.includes("organic") ||
-    q.includes("bio") ||
-    q.includes("compost") ||
-    q.includes("natural") ||
-    q.includes("pesticide free")
-  ) {
-    return `### Sustainable & Organic Farming Advisory
-
-Core principles for regenerative and organic agricultural systems:
-
-1. **Liquid Bio-Formulations**:
-   - **Jeevamrutha / Panchagavya**: Apply with irrigation water at 200 litres/acre twice a month to stimulate beneficial soil microbes.
-   - **Agniastra / Dashaparni Kashayam**: Highly effective herbal sprays for broad-spectrum insect repellency.
-
-2. **Composting & Carbon Sequestration**:
-   - Layer dry carbon materials (straw, stalks) with nitrogen-rich greens (cow dung, green leaves) at a 30:1 C:N ratio.
-   - Maintain 50% moisture and turn compost every 15 days for rapid aerobic decomposition.
-
-3. **Biological Disease Antagonists**:
-   - Enrich Farmyard Manure with *Trichoderma harzianum* (1 kg per 100 kg manure) 10 days before field application to eliminate soil pathogens.`;
-  }
-
-  if (q.includes("water") || q.includes("irrigat") || q.includes("dry") || q.includes("drought")) {
-    return `### Irrigation & Water Conservation Advisory
-
-Water management guidelines for optimal crop growth:
-
-1. **Critical Moisture Stages**:
-   - Prioritize irrigation during flowering, grain filling, and fruit set to prevent significant yield loss.
-2. **Drip & Micro-Irrigation**:
-   - Drip irrigation can reduce water usage by 40–60% while increasing fertilizer efficiency through fertigation.
-3. **Mulching**:
-   - Apply 3–4 inches of organic straw or plastic mulch to conserve root-zone soil moisture and suppress weed competition.`;
-  }
-
-  // 5. If it contains general agricultural words, provide general farm guidance
-  if (hasFarmingTerm) {
-    return `### AgriSmart Crop & Farm Guidance
+  // 4. If agricultural keywords are present but no specific RAG chunk met the high threshold
+  return {
+    answerText: `### AgriSmart Crop & Farm Guidance
 
 Here are practical agricultural principles for your farm:
 
@@ -469,18 +448,9 @@ Here are practical agricultural principles for your farm:
 - **Pest Surveillance**: Inspect fields weekly for early symptoms of leaf spots, rusts, and sucking pests.
 - **Input Optimization**: Balance chemical fertilizers with bio-fertilizers and micronutrients (Zinc, Boron, Sulfur).
 
-*Please specify your crop type, soil condition, or region for tailored recommendations!*`;
-  }
-
-  // 6. Unrecognized or non-farming query fallback
-  return `### 🌾 AgriSmart AI Coach Notice
-
-I am specialized strictly in **Smart Farming, Crop Management, Soil Health, and Precision Agriculture**.
-
-I couldn't identify a farming-related topic in your question. Please ask about:
-- Crop health, sowing schedules, or disease symptoms
-- Soil test interpretation, fertilizers, or pH correction
-- Pest control, organic formulations, or irrigation methods`;
+*No specific AgriSmart knowledge-base chunk directly matched your exact query. Please specify your crop type, soil condition, or region for tailored recommendations!*`,
+    sources: [],
+  };
 }
 
 function createTextStreamResponse(fullText: string): Response {
@@ -552,10 +522,27 @@ export const Route = createFileRoute("/api/chat")({
           // Fallback to default query text
         }
 
+        // Perform RAG Knowledge Base Retrieval
+        const { chunks: retrievedChunks } = retrieveRelevantKnowledgeChunks(queryText, 3);
+
         // Try Gemini SDK if apiKey is available
         if (apiKey) {
           try {
             const ai = new GoogleGenAI({ apiKey });
+
+            let ragContextPrompt = "";
+            if (retrievedChunks.length > 0) {
+              ragContextPrompt = `\n\nRETRIEVED AGRISMART KNOWLEDGE BASE CHUNKS (${retrievedChunks.length} sources):
+${retrievedChunks
+  .map(
+    (c) =>
+      `[Source: ${c.chunk_id} | Title: ${c.title} | Topic: ${c.topic}]\nContent: ${c.content}\nKeywords: ${c.keywords.join(", ")}`,
+  )
+  .join("\n\n")}
+
+CRITICAL INSTRUCTION: Base your response directly on the facts in these retrieved chunks.`;
+            }
+
             const chatContents = conversationHistory.map((msg) => ({
               role: msg.role === "user" ? "user" : "model",
               parts: [{ text: msg.text }],
@@ -570,21 +557,27 @@ export const Route = createFileRoute("/api/chat")({
               model: "gemini-3.7-flash",
               contents,
               config: {
-                systemInstruction: SYSTEM_PROMPT,
+                systemInstruction: SYSTEM_PROMPT + ragContextPrompt,
               },
             });
 
             if (response.text) {
-              return createTextStreamResponse(response.text);
+              const fullResponseWithMetadata =
+                response.text + formatSourcesPayload(retrievedChunks);
+              return createTextStreamResponse(fullResponseWithMetadata);
             }
           } catch {
             // Silently fall back to expert agricultural advisory
           }
         }
 
-        // Return expert agronomy guidance
-        const fallbackText = generateLocalAgronomyAdvice(queryText);
-        return createTextStreamResponse(fallbackText);
+        // Return expert agronomy guidance grounded in retrieved RAG chunks
+        const { answerText, sources } = generateGroundedAgronomyResponse(
+          queryText,
+          retrievedChunks,
+        );
+        const fullFallbackWithMetadata = answerText + formatSourcesPayload(sources);
+        return createTextStreamResponse(fullFallbackWithMetadata);
       },
     },
   },

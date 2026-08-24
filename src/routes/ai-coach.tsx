@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { AlertTriangle, Bot, Info, Plus, SendHorizonal } from "lucide-react";
+import { AlertTriangle, BookOpen, Bot, Info, Plus, SendHorizonal } from "lucide-react";
 import { DashboardLayout } from "@/components/site/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,9 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
-import { Message, MessageContent } from "@/components/ai-elements/message";
+import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import { KnowledgeSources } from "@/components/ai-elements/knowledge-sources";
+import { parseMessageTextWithSources } from "@/lib/ragParser";
 import {
   PromptInput,
   PromptInputFooter,
@@ -43,10 +45,10 @@ export const Route = createFileRoute("/ai-coach")({
 });
 
 const SUGGESTED_QUESTIONS = [
-  "What crops grow best in my region this season?",
-  "How can I improve my soil's nitrogen levels naturally?",
-  "When should I water my fields during a dry week?",
-  "Which pests commonly affect tomato plants in summer?",
+  "How can I improve my soil health and organic matter?",
+  "Why is crop rotation important for pest control?",
+  "What is the best way to monitor pests using surveillance?",
+  "How do I correct soil acidity and pH balance?",
 ] as const;
 
 function Page() {
@@ -95,12 +97,13 @@ function AICoach() {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="truncate text-base font-bold leading-tight">AgriSmart AI Coach</h1>
-                <span className="hidden sm:inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-                  Smart Farming Only
+                <span className="hidden sm:inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                  <BookOpen className="h-3 w-3" />
+                  RAG Knowledge Grounded
                 </span>
               </div>
               <p className="truncate text-xs text-muted-foreground">
-                Dedicated agricultural guidance for crops, soil, pests & weather
+                Retrieval-Augmented agricultural guidance for crops, soil, pests & weather
               </p>
             </div>
           </div>
@@ -151,16 +154,26 @@ function AICoach() {
                 const partsText = Array.isArray(message.parts)
                   ? message.parts.map((part) => (part.type === "text" ? part.text : "")).join("")
                   : "";
-                const text =
+                const rawText =
                   partsText ||
                   ("content" in message && typeof message.content === "string"
                     ? message.content
                     : "");
-                if (!text) return null;
+                if (!rawText) return null;
+
+                const { cleanText, sources } = parseMessageTextWithSources(rawText);
+
                 return (
                   <Message key={message.id} from={message.role}>
                     <MessageContent>
-                      <p className="whitespace-pre-wrap break-words">{text}</p>
+                      {message.role === "assistant" ? (
+                        <div className="w-full space-y-2">
+                          <MessageResponse>{cleanText}</MessageResponse>
+                          <KnowledgeSources sources={sources} />
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words">{rawText}</p>
+                      )}
                     </MessageContent>
                   </Message>
                 );
@@ -173,7 +186,7 @@ function AICoach() {
               <Message from="assistant">
                 <MessageContent>
                   <Shimmer as="p" className="text-sm">
-                    Thinking...
+                    Retrieving AgriSmart knowledge base...
                   </Shimmer>
                 </MessageContent>
               </Message>

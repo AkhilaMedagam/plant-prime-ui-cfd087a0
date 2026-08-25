@@ -3,15 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/lib/auth";
-import { db, collection, addDoc, serverTimestamp } from "@/lib/firebase";
 
 type Fields = { name: string; email: string; phone: string; message: string };
 type Errors = Partial<Record<keyof Fields, string>>;
+type WebhookResponse = {
+  success?: boolean;
+  message?: string;
+  error?: string;
+};
 
 const empty: Fields = { name: "", email: "", phone: "", message: "" };
 
 const MAX_MESSAGE = 2000;
+const N8N_WEBHOOK_URL = "https://akhila2004.app.n8n.cloud/webhook/agrismart-contact";
 
 function validate(values: Fields): Errors {
   const errors: Errors = {};
@@ -31,7 +35,6 @@ function validate(values: Fields): Errors {
 }
 
 export function ContactForm() {
-  const { user } = useAuth();
   const [values, setValues] = useState<Fields>(empty);
   const [errors, setErrors] = useState<Errors>({});
   const [sent, setSent] = useState(false);
@@ -56,23 +59,41 @@ export function ContactForm() {
     setSubmitError(null);
 
     try {
-      await addDoc(collection(db, "contact_submissions"), {
-        full_name: values.name.trim(),
-        email: values.email.trim(),
-        phone: values.phone.trim(),
-        message: values.message.trim(),
-        status: "new",
-        user_id: user?.uid ?? null,
-        created_at: serverTimestamp(),
+      const response = await fetch(N8N_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          full_name: values.name.trim(),
+          email: values.email.trim(),
+          phone: values.phone.trim(),
+          message: values.message.trim(),
+        }),
       });
 
-      setValues(empty);
-      setSent(true);
+      let data: WebhookResponse | null = null;
+      try {
+        data = (await response.json()) as WebhookResponse;
+      } catch {
+        // Response might be empty or non-JSON text
+      }
+
+      if (data && typeof data === "object" && data.success === false) {
+        const errorMsg =
+          data.message ||
+          data.error ||
+          "Validation failed. Please verify your details and try again.";
+        setSubmitError(errorMsg);
+      } else if (response.ok && (data?.success === true || !data || response.status === 200)) {
+        setValues(empty);
+        setSent(true);
+      } else {
+        setSubmitError("Unable to submit your message right now. Please try again.");
+      }
     } catch (err) {
-      console.error("Failed to submit contact message to Firestore:", err);
-      setSubmitError(
-        "We could not submit your message. Please check your connection and try again.",
-      );
+      console.error("Failed to submit contact message to n8n webhook:", err);
+      setSubmitError("Unable to submit your message right now. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -124,7 +145,7 @@ export function ContactForm() {
       </div>
 
       <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={submitting}>
-        {submitting ? "Sending..." : "Send Message"}
+        {submitting ? "Submitting..." : "Send Message"}
       </Button>
 
       {sent ? (
